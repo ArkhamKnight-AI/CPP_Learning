@@ -80,6 +80,7 @@ int main() {
 	s1.~SeqStack(); //析构函数调用后 我们说对象不存在了
 	//s1.push(3); //堆内存的非法访问
 
+	//malloc + SeqStack(30)
 	SeqStack* s2 = new SeqStack(30);
 	//先调用ps->~SeqStack() + free(ps)
 	delete s2;
