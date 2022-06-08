@@ -1,0 +1,107 @@
+#include<iostream>
+#include<vector>
+#include<string>
+#include<algorithm>
+using namespace std;
+
+class SeqStack {
+public:
+	//构造函数 SeqStack s1; SeqStack s2(20);
+	SeqStack(int size = 10) {//是可以带参数的 因此可以提供多个构造函数
+		cout << this << " SeqStack()" << endl;
+		_pstack = new int[size];
+		_top = -1;
+		_size = size;
+	}
+
+	//自定义拷贝构造函数 解决浅拷贝的问题
+	SeqStack(const SeqStack &src) {
+		cout << "SeqStack(const SeqStack &src)" << endl;
+		_pstack = new int[src._size];
+		for (int i = 0; i < src._size; i++) {
+			_pstack[i] = src._pstack[i];
+		}
+		_size = src._size;
+		_top = src._top;
+	}
+
+	//重载=运算符 赋值重载函数
+	void operator=(const SeqStack& src) {
+		cout << "void operator=(const SeqStack& src)" << endl;
+
+		//1、防止自赋值 先判断是否是自己
+		if (this == &src) {
+			return;
+		}
+
+		//2、先释放对象占用的外部资源
+		delete _pstack;
+
+		//3、重新开辟一片内存 存放数据
+		_pstack = new int[src._size];
+		for (int i = 0; i < src._size; i++) {
+			_pstack[i] = src._pstack[i];
+		}
+		_size = src._size;
+		_top = src._top;
+	}
+	
+
+	//析构函数 
+	~SeqStack() {//是不可以带参数的 有且只有一个析构函数
+		cout << this << " ~SeqStack()" << endl;
+		delete[] _pstack;
+		_pstack = nullptr;
+	}
+
+	void push(int val) {
+		if (full()) {
+			resize();
+		}
+
+		_pstack[++_top] = val;
+	}
+
+	void pop() {
+		if (empty()) return;
+		--_top;
+	}
+
+	int top() {
+		return _pstack[_top];
+	}
+
+	bool empty() {
+		return _top == -1;
+	}
+
+	bool full() {
+		return _top == _size - 1;
+	}
+
+	
+
+private:
+	int* _pstack;
+	int _top;
+	int _size;
+	void resize() {
+		int *ptmp = new int[_size * 2];
+		for (int i = 0; i < _size; i++) {
+			ptmp[i] = _pstack[i];
+		} //memcpy(ptmp, _pstack, sizeof(int)* _size; realloc
+
+		delete[] _pstack;
+		_pstack = ptmp;
+		_size = 2 * _size;
+	}
+};
+
+
+int main() {
+	SeqStack s;
+	SeqStack s1(10);
+	SeqStack s2 = s1;
+	s2 = s1;  
+	return 0;
+} 
