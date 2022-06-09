@@ -1,0 +1,75 @@
+#include<iostream>
+#include<string>
+using namespace std;
+
+#if 0
+//日期类 CDate是CGoods商品信息的一部分 组合的关系
+class CDate {
+public:
+	//报错：CDate不包括默认构造函数
+	//自定义构造函数 编译器不会再产生默认构造函数
+	CDate(int y, int m, int d) {
+		_year = y;
+		_month = m;
+		_day = d;
+	}
+
+	void show() {
+		cout << _year << "/" << _month << "/" << _day << endl;
+	}
+
+private:
+	int _year;
+	int _month;
+	int _day;
+};
+
+class CGoods {
+public:
+	CGoods(const char* n, int a, double price, int y, int m, int d)
+		: _date(y, m, d)  //构造函数的初始化列表可以为当前对象的成员变量指定初始化方式
+	{
+		//当前类构造函数函数体
+		strcpy(_name, n);
+		_amount = a;
+		_price = price;
+	}
+
+	void show() {
+		cout << "name: " << _name << endl;
+		cout << "amount: " << _amount << endl;
+		cout << "price: " << _price << endl;
+		_date.show();
+	}
+
+private:
+	char _name[20];
+	int _amount;
+	double _price;
+	CDate _date; //成员对象 生成包括两部分：1.分配内存 2.调用构造函数 
+};
+
+int main() {
+	CGoods g("good", 100, 35, 2020, 5, 12);
+	g.show();	
+	return 0;
+}
+#endif
+
+class Test {
+public:
+	Test(int data = 10) : mb(data), ma(mb) {}
+	void show() {
+		cout << "ma = " << ma << " mb = " << mb << endl;
+	}
+
+private:
+	int ma;
+	int mb;
+};
+
+int main() {
+	Test t;
+	t.show();
+	return 0;
+}
