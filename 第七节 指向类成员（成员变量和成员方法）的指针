@@ -1,0 +1,52 @@
+#include<iostream>
+using namespace std;
+
+class Test {
+public:
+	void func() { cout << "call Test::func" << endl; }
+	static void static_func() { cout << "Test::static_func" << endl; }
+	int ma;
+	static int mb;
+};
+int Test::mb;
+
+int main() {
+	//int a = 10; int *p = &a; *p = 30;
+	//无法从int Test::* 转换为 int*
+	//int Test::*p = &Test::ma;
+
+	Test t1;
+	Test *t2 = new Test();
+
+	//指向成员方法的指针
+	//指向的是Test这个类中 返回值是void 不带形参的一个函数 pfunc()
+	void(Test::*pfunc)() = &Test::func;
+
+	//调用时必须用对象来调用 否则无法调用
+	(t1.*pfunc)();
+	(t2->*pfunc)();
+
+	//如何定义函数指针指向的static成员方法呢？
+	//直接定义普通的指针即可
+	void (*psfunc)() = &Test::static_func;
+	(*psfunc)();
+
+
+#if 0
+	int Test::*p = &Test::ma;
+	//通过指针解引用访问普通成员变量ma时 要把依赖的对象加好
+	t1.*p = 20;
+	cout << t1.*p << endl;
+
+	t2->*p = 30;
+	cout << t2->*p << endl;
+
+	//静态成员变量不依赖于具体的对象 可以直接定义普通的指针指向它
+	int *p1 = &Test::mb;
+	*p1 = 40;
+	cout << Test::mb << endl;
+
+	delete t2;
+	return 0;
+#endif
+}
