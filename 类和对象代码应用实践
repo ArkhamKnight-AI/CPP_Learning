@@ -1,0 +1,189 @@
+#include<iostream>
+#include<string>
+#include<string.h>
+using namespace std;
+
+#if 0
+class String {
+public:
+	//普通构造函数
+	String(const char* str = nullptr) {
+		if (str != nullptr) {
+			//+1是为了加上\0
+			m_data = new char[strlen(str) + 1];
+			strcpy(this->m_data, str);
+		}
+
+		//就算为空也要开辟内存 置为'\0' 否则后面一直要if else判断
+		else {
+			m_data = new char[1];
+			*m_data = '\0';
+		}
+		
+	}
+
+	//拷贝构造
+	String(const String &other) {
+		m_data = new char[strlen(other.m_data) + 1];
+		strcpy(this->m_data, other.m_data);
+	}
+
+	 //析构函数
+	~String(void) {
+		delete[] m_data;
+		m_data = nullptr;
+	}
+
+	//重载等号运算符 可以使用void 但是连等就会出问题   
+	String& operator=(const String &other) {
+		if (this == &other) {
+			return *this;
+		}
+
+		delete[] m_data;
+		m_data = new char[strlen(other.m_data) + 1];
+		strcpy(m_data, other.m_data);
+		return *this;
+	}
+
+private:
+	char *m_data; //用于保存字符串
+};
+
+
+int main() {
+	//调用带const char*参数的构造函数
+	String str1;
+	String str2("hello");
+	String str3 = "world";
+
+	//调用拷贝构造函数
+	String str4 = str3;
+	String str5(str3);
+
+	//调用赋值重载函数
+	str1 = str2;
+
+	return 0;
+} 
+#endif
+
+//循环队列
+class Queue {
+public:
+	//构造函数
+	Queue(int size = 20) {
+		_pQueue = new int[size];
+		_front = _rear = 0;
+		_size = size;
+	}
+	
+	//拷贝构造可以直接delete
+	//Queue(const Queue&) = delete;
+
+	//返回引用是为了连续赋值
+	//Queue& operator=(const Queue&) = delete;
+
+	//对象深拷贝
+	Queue(const Queue& src) {
+		_size = src._size;
+		_front = src._front;
+		_rear = src._rear;
+
+		_pQueue = new int[_size];
+		for (int i = _front; i != _rear; i = (i + 1) % _size) {
+			_pQueue[i] = src._pQueue[i];
+		}
+	}
+
+	Queue& operator=(const Queue& src) {
+		if (this == &src) return *this;
+
+		delete[] this->_pQueue;
+
+		_size = src._size;
+		_front = src._front;
+		_rear = src._rear;
+		_pQueue = new int[_size];
+		for (int i = _front; i != _rear; i = (i + 1) % _size) {
+			_pQueue[i] = src._pQueue[i];
+		}
+
+		return *this;
+	}
+
+	//入队操作
+	void push(int val) {
+		if (full()) resize();
+		//队尾入队
+		_pQueue[_rear] = val;
+		//让队尾循环起来
+		_rear = (_rear + 1) % _size;
+	}
+
+	//出队操作
+	void pop() {
+		if (empty()) return;
+		_front = (_front + 1) % _size;
+	}
+
+	//获取队头元素
+	int front() {
+		return _pQueue[_front];
+	}
+
+	//判断是否为空
+	bool empty() {
+		return _front == _rear;
+	}
+
+	//判断是否满
+	bool full() {
+		return (_rear + 1) % _size == _front;
+	}
+
+	//析构函数
+	~Queue() {
+		delete[] _pQueue;
+		_pQueue = nullptr;
+	}
+
+private:
+	int *_pQueue; //申请队列的数组空间
+	int _front;   //指示队头的位置
+	int _rear;    //指示队尾的位置
+	int _size;    //队列扩容的总大小
+
+	void resize() {
+		int *temp = new int[2 * _size];
+
+		//_front和_rear可能表示数组中不是从0开始的一段内存 且_rear+1==_front
+		//所以如果继续执行 依然是队满的情况 因此队列扩容首先要从front遍历到rear 从新数组0位置开始顺序存放
+		int index = 0;
+		for (int i = _front; i != _rear; i = (i + 1) % _size) {
+			temp[index++] = _pQueue[i];
+		}
+
+		delete[] _pQueue;
+		_pQueue = temp;
+		_rear = index;
+		_front = 0;
+		_size *= 2;
+	}
+};
+
+int main() {
+	Queue queue;
+	for (int i = 0; i < 20; i++) {
+		queue.push(rand() % 100);
+	}
+
+	while (!queue.empty()) {
+		cout << queue.front() << " ";
+		queue.pop();
+	}
+
+	Queue q2;
+	q2 = queue;
+	return 0;
+}
