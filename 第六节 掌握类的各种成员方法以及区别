@@ -1,0 +1,92 @@
+#include<iostream>
+using namespace std;
+
+//日期类 CDate是CGoods商品信息的一部分 组合的关系
+class CDate {
+public:
+	//报错：CDate不包括默认构造函数
+	//自定义构造函数 编译器不会再产生默认构造函数
+	CDate(int y, int m, int d) {
+		_year = y;
+		_month = m;
+		_day = d;
+	}
+
+	void show() const {
+		cout << _year << "/" << _month << "/" << _day << endl;
+	}
+
+private:
+	int _year;
+	int _month;
+	int _day;
+};
+
+class CGoods {
+public:
+	CGoods(const char* n, int a, double price, int y, int m, int d)
+		: _date(y, m, d)  //构造函数的初始化列表可以为当前对象的成员变量指定初始化方式
+	{
+		//当前类构造函数函数体
+		strcpy(_name, n);
+		_amount = a;
+		_price = price;
+		_count++; //记录产生所有新对象的数量
+	}
+
+	//打印商品的私有信息
+	//普通成员方法
+	void show() { 
+		cout << "name: " << _name << endl;
+		cout << "amount: " << _amount << endl;
+		cout << "price: " << _price << endl;
+		_date.show();
+	}
+
+	//常成员方法
+	void show() const{  //const CGoods* this
+		cout << "name: " << _name << endl;
+		cout << "amount: " << _amount << endl;
+		cout << "price: " << _price << endl;
+
+		//常方法中 this指向的对象都是不能改变的 都是常量 所以show是一个常方法
+		_date.show();
+	}
+
+	//打印的是所有商品共享的信息
+	static void showCGoodsCount() {
+		cout << "所有商品的种类数量是" << _count << endl;
+	}
+
+private:
+	char _name[20];
+	int _amount;
+	double _price;
+	CDate _date; //成员对象 生成包括两部分：1.分配内存 2.调用构造函数
+	static int _count; //静态变量可以统计商品的总数量 因为它不属于某一个具体的对象
+};
+
+//静态成员变量 类内声明 类外定义 类外初始化
+int CGoods::_count = 0;
+
+int main() {
+	CGoods good1("good1", 100, 35, 2020, 5, 12);
+	good1.show();
+	CGoods good2("good2", 100, 35, 2020, 5, 12);
+	good2.show();
+	CGoods good3("good3", 100, 35, 2020, 5, 12);
+	good3.show();
+	CGoods good4("good4", 100, 35, 2020, 5, 12);
+	good4.show();
+
+	//统计所有商品的总数量
+	CGoods::showCGoodsCount();
+	 
+	//不可以直接使用CGoods::showCGoodsCount()这个方法查看 因为showCGoodsCount()是一个普通成员方法 需要具体的对象才能传入this指针
+
+	const CGoods good5("非卖品5", 100, 35.0, 2019, 5, 12);
+	good5.show(); //CGoods::show(&good5) 取地址后变为 const CGoods*常量指针
+	//而生成的形参指针是一个CGoods* 不可以const CGoods*传递给CGoods*
+
+	return 0;
+}
