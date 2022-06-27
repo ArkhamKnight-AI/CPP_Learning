@@ -1,0 +1,77 @@
+#include<iostream>
+#include<vector>
+using namespace std;
+
+
+int main() {
+#if 0
+	vector<int> vec;
+	for (int i = 0; i < 20; i++) {
+		vec.push_back(rand() % 100 + 1);
+	}
+
+	int size = vec.size();
+	//vector的operator[]运算符重载函数
+	for (int i = 0; i < size; i++) {
+		cout << vec[i] << " ";
+	}
+	cout << endl;
+
+	//使用迭代器
+	for (auto it1 = vec.begin(); it1 != vec.end(); it1++) {
+		cout << *it1 << " ";
+	}
+	cout << endl;
+
+	//把vec容器中所有偶数元素删除
+	auto it2 = vec.begin();
+	while(it2 != vec.end()) {
+		if (*it2 % 2 == 0) {
+			//迭代器失效的问题 vec.erase(it2)使it2失效
+			//使用erase的返回值更新it2 erase的返回值指向删除元素的下一个
+			//即 erase返回值是一个迭代器 指向删除元素的下一个元素
+			it2 = vec.erase(it2);
+		}
+		//当前位置继续判断 不是单纯的it++
+		else {
+			it2++;
+		}
+	}
+	for (auto it1 = vec.begin(); it1 != vec.end(); it1++) {
+		cout << *it1 << " ";
+	}
+	cout << endl;
+
+
+	//给vector容器中所有奇数前添加一个小于奇数1的偶数 44 45 连续的插入
+	for (auto it1 = vec.begin(); it1 != vec.end(); it1++) {
+		if (*it1 % 2 != 0) {
+			//insert返回值是一个迭代器 指向插入元素的下一个元素
+			it1 = vec.insert(it1, *it1 - 1); 
+			it1++;
+		}
+	}
+	for (auto it1 = vec.begin(); it1 != vec.end(); it1++) {
+		cout << *it1 << " ";
+	}
+	cout << endl;
+
+# endif
+	vector<int> vec;
+	//reserve -> 给vector容器预留20个空间 只开辟空间 不添加新的元素 防止频繁的扩容操作
+	//resize -> 给vector容器开辟空间 不光开辟空间 还将元素赋值为0
+	vec.reserve(20);
+	cout << vec.empty() << endl;  //1
+	cout << vec.size() << endl;  //0
+
+	for (int i = 0; i < 20; i++) {
+		vec.push_back(rand() % 100 + 1);
+	}
+
+	cout << vec.empty() << endl; //0
+	cout << vec.size() << endl; //20
+
+
+
+	return 0;
+}
