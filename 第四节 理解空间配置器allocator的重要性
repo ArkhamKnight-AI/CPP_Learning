@@ -10,18 +10,17 @@ template<class _Ty,
 
 //定义容器的空间配置器 和C++标准库的allocator实现一样
 template<typename T>
-class Allocator
+struct Allocator
 {
-public:
 	//内存开辟 size_t是一个unsigned int类型
-	T* allocator(size_t size) 
+	T* allocate(size_t size)
 	{
 		return (T*)malloc(sizeof(T) * size);
 	}
 
 	//内存释放
 	void deallocate(void *p) {
-		free p;
+		free(p);
 	}
 
 	//对象构造
@@ -43,6 +42,12 @@ public:
 template<typename T, typename Alloc = Allocator<T>>
 class vector {
 public:
+	//如果没有Alloc = Alloator<T>这句话 添加进后面的参数列表中 则应写成如下形式
+	/*
+	vector(int size = 10, const Alloc &alloc = Allocator<T>
+		:_allocator(alloc)
+	*/
+
 	//需要把内存开辟和对象构造分开处理
 	vector(int size = 10)
 	{
@@ -55,18 +60,24 @@ public:
 	~vector() {
 		//delete[] _first;
 		//析构有效的元素 然后释放_first指针指向的堆内存
-		for(T *p = _first; p != _last; p++)
+		for (T *p = _first; p != _last; p++) {
+			_allocator.destroy(p); //把_first指针指向的数组的有效元素进行析构操作
+		}
+
+		_allocator.deallocate(_first); //释放堆上数组内存
+		_first = _last = _end = nullptr;
 	}
 
 	//拷贝构造函数 不省略<T>
 	vector(const vector<T>& rhs) {
 		int size = rhs._end - rhs._first;
-		_first = new T[size];
+		//_first = new T[size];
+		_first = _allocator.allocate(size);
 		//有效数据的长度
 		int len = rhs._last - rhs._first;
 		//对有效数据部分进行赋值操作
 		for (int i = 0; i < len; i++) {
-			_first[i] = rhs._first[i];
+			_allocator.construct(_first + i, rhs._first[i]);
 		}
 		_last = _first + len;
 		_end = _first + size;
@@ -78,17 +89,27 @@ public:
 		if (this == &rhs) return;
 
 		//释放原空间
-		delete[] _first;
+		//delete[] _first;
+		//把当前容器中的所有对象释放掉 再把容器内存释放掉
+		//先析构对象
+		for (T *p = _first; p != _last; p++) {
+			_allocator.destroy(p); //把_first指针指向的数组的有效元素进行析构操作
+		}
+		//再释放内存
+		_allocator.deallocate(_first); //释放堆上数组内存
 
-		//有效数据赋值 和拷贝构造一样
+		//然后和拷贝构造一样
 		int size = rhs._end - rhs._first;
-		_first = new T[size];
+		//_first = new T[size];
+		_first = _allocator.allocate(size);
+		//有效数据的长度
 		int len = rhs._last - rhs._first;
+		//对有效数据部分进行赋值操作
 		for (int i = 0; i < len; i++) {
-			_first[i] = rhs._first[i];
+			_allocator.construct(_first + i, rhs._first[i]);
 		}
 		_last = _first + len;
-		_end = _first + size;
+		_end = _first + size; 
 	}
 
 	//向容器末尾添加元素
@@ -97,7 +118,10 @@ public:
 			expand();
 		}
 
-		*_last++ = val;
+		//*_last++ = val;
+		//在_last指针指向的内存构造一个值为value的对象
+		_allocator.construct(_last, val);
+		_last++;
 	}
 
 	//从容器末尾删除元素
@@ -106,7 +130,9 @@ public:
 			return;
 		}
 
+		//不仅要把_last指针-- 还需要析构删除的元素
 		--_last;
+		_allocator.destroy(_last); 
 	}
 
 	//返回容器末尾元素的值
@@ -138,15 +164,23 @@ private:
 	//容器二倍扩容
 	void expand() {
 		int size = _last - _first;
-		T * temp = new T[2 * size];
-		
+		//T * temp = new T[2 * size];
+		//开辟空间 不要构造T类型无效对象
+		T *temp = _allocator.allocate(2 * size);
+
 		//拷贝元素
 		for (int i = 0; i < size; i++) {
+			_allocator.construct(temp + i, _first[i]);
 			temp[i] = _first[i];
 		}
 
-		//释放原空间
-		delete[] _first;
+		//释放原空间 把有效元素进行析构 不需要全部析构
+		//delete[] _first;
+		for (T* p = _first; p != _last; p++) {
+			_allocator.destroy(p);
+		}
+		//释放原数组空间
+		_allocator.deallocate(_first);
 
 		_first = temp;
 		_last = _first + size;
@@ -158,6 +192,7 @@ class Test {
 public:
 	Test() { cout << "Test()" << endl; }
 	~Test() { cout << "~Test()" << endl; }
+	Test(const Test& t) { cout << "Test(const Test&)" << endl; }
 };
 
 int main() {
@@ -171,4 +206,4 @@ int main() {
 	vec.pop_back(); //只需要析构对象。 要把对象的析构和内存释放分离开  delete把两者同时完成
 	cout << "-----------------" << endl;
 	return 0;
-} 
+}
