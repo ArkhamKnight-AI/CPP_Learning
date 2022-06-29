@@ -1,0 +1,174 @@
+#include<iostream>
+using namespace std;
+
+/*
+空间配置器allocator
+template<class _Ty,
+		class _Alloc = allocator<_Ty>>
+		class vector
+*/
+
+//定义容器的空间配置器 和C++标准库的allocator实现一样
+template<typename T>
+class Allocator
+{
+public:
+	//内存开辟 size_t是一个unsigned int类型
+	T* allocator(size_t size) 
+	{
+		return (T*)malloc(sizeof(T) * size);
+	}
+
+	//内存释放
+	void deallocate(void *p) {
+		free p;
+	}
+
+	//对象构造
+	//在指定地址p中植入值为val的对象
+	void construct(T *p, const T &val) {
+		//定位new 在指定的内存上构造一个值为val的对象 调用T类型对象的拷贝构造
+		new (p) T(val);
+	}
+
+	//对象析构
+	//将p指向的对象析构
+	void destroy(T *p) {
+		p->~T();//~T()代表T类型的析构函数
+	}
+};
+
+
+//容器底层内存开辟 内存释放 对象构造和析构 都通过allocator空间配置器来实现
+template<typename T, typename Alloc = Allocator<T>>
+class vector {
+public:
+	//需要把内存开辟和对象构造分开处理
+	vector(int size = 10)
+	{
+		_first = _allocator.allocate(size);
+		_last = _first;
+		_end = _first + size;
+	}
+
+	//析构容器的 有效元素 然后释放_first指针指向的 堆内存
+	~vector() {
+		//delete[] _first;
+		//析构有效的元素 然后释放_first指针指向的堆内存
+		for(T *p = _first; p != _last; p++)
+	}
+
+	//拷贝构造函数 不省略<T>
+	vector(const vector<T>& rhs) {
+		int size = rhs._end - rhs._first;
+		_first = new T[size];
+		//有效数据的长度
+		int len = rhs._last - rhs._first;
+		//对有效数据部分进行赋值操作
+		for (int i = 0; i < len; i++) {
+			_first[i] = rhs._first[i];
+		}
+		_last = _first + len;
+		_end = _first + size;
+	}
+
+	//等号运算符=重载 返回引用是为了支持连续赋值
+	vector<T> operator=(const vector<T> &rhs) {
+		//防止自赋值
+		if (this == &rhs) return;
+
+		//释放原空间
+		delete[] _first;
+
+		//有效数据赋值 和拷贝构造一样
+		int size = rhs._end - rhs._first;
+		_first = new T[size];
+		int len = rhs._last - rhs._first;
+		for (int i = 0; i < len; i++) {
+			_first[i] = rhs._first[i];
+		}
+		_last = _first + len;
+		_end = _first + size;
+	}
+
+	//向容器末尾添加元素
+	void push_back(const T& val) {
+		if (full()) {
+			expand();
+		}
+
+		*_last++ = val;
+	}
+
+	//从容器末尾删除元素
+	void pop_back() {
+		if (empty()) {
+			return;
+		}
+
+		--_last;
+	}
+
+	//返回容器末尾元素的值
+	T back() const {
+		return *(_last - 1);
+	}
+
+	//判断是否满
+	bool full() {
+		return _last == _end;
+	}
+
+	//判断是否为空
+	bool empty() {
+		return _first == _last;
+	}
+
+	//返回元素个数
+	int size() const {
+		return _last - _first;
+	}
+
+private:
+	T *_first; //指向数组起始的位置
+	T *_last;  //指向数组中有效元素的后继位置
+	T *_end;   //指向数组空间的后继位置
+	Alloc _allocator; //定义容器的空间配置器对象
+
+	//容器二倍扩容
+	void expand() {
+		int size = _last - _first;
+		T * temp = new T[2 * size];
+		
+		//拷贝元素
+		for (int i = 0; i < size; i++) {
+			temp[i] = _first[i];
+		}
+
+		//释放原空间
+		delete[] _first;
+
+		_first = temp;
+		_last = _first + size;
+		_end = _first + 2 * size;
+	}
+};
+
+class Test {
+public:
+	Test() { cout << "Test()" << endl; }
+	~Test() { cout << "~Test()" << endl; }
+};
+
+int main() {
+	Test t1, t2, t3;
+	cout << "-----------------" << endl;
+	vector<Test> vec;
+	vec.push_back(t1);
+	vec.push_back(t2);
+	vec.push_back(t3);
+	cout << "-----------------" << endl;
+	vec.pop_back(); //只需要析构对象。 要把对象的析构和内存释放分离开  delete把两者同时完成
+	cout << "-----------------" << endl;
+	return 0;
+} 
