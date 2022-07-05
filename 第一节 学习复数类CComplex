@@ -1,0 +1,120 @@
+#include<iostream>
+using namespace std;
+
+/*
+C++运算符重载：使对象的运算表现的和编译器内置类型一样
+template<typename T>
+T sum(T a, T b){
+	return a + b;
+} //a.operator+(b);
+*/
+
+//复数类
+class CComplex {
+public:
+	//友元函数
+	friend CComplex operator+ (const CComplex& lhs, const CComplex& rhs); //+运算符重载
+	friend ostream& operator<<(ostream& out, const CComplex& src); //<<运算符重载
+	friend istream& operator>>(istream& in, CComplex& src); //>>运算符重载
+
+	//提供了3种构造函数 
+	//(1)CComplex() 实部和虚部初始化为0
+	//(2)CComplex(20) 实部初始化为20 虚部初始化为0
+	CComplex(int r = 0, int i = 0)
+		: mreal(r), mimage(i) {}
+
+	//知道编译器如何做CComplex类加法操作
+	//comp是局部对象 不能返回局部对象和局部变量的引用或指针
+	//因为函数运行完栈针回退 地址被释放
+	CComplex operator+(const CComplex& src) {
+		/*CComplex comp;
+		comp.mreal = this->mreal + src.mreal;
+		comp.mimage = this->mimage + src.mimage;
+		return comp;*/
+		return CComplex(this->mreal + src.mreal, this->mimage + src.mimage);
+	}
+
+	//前置++
+	CComplex& operator++() {
+		mreal += 1;
+		mimage += 1;
+		return *this;
+	}
+
+	//后置++
+	CComplex operator++(int) {
+		CComplex comp = *this;
+		mreal += 1;
+		mimage += 1;
+		return comp;
+	}
+
+	//+=运算符重载
+	void operator+=(const CComplex& src) {
+		mreal += src.mreal;
+		mimage += src.mimage;
+	}
+
+	//打印复数
+	void show() {
+		cout << "real: " << mreal << " image: " << mimage << endl;
+	}
+
+private:
+	int mreal;
+	int mimage;
+};
+
+//全局+运算符重载
+CComplex operator+ (const CComplex& lhs, const CComplex& rhs) {
+	return CComplex(lhs.mreal + rhs.mreal, lhs.mimage + rhs.mimage);
+}
+
+//<<运算符重载 
+//流对象是不断变化的 不能加const
+ostream& operator<<(ostream& out, const CComplex& src) {
+	out << "mreal: " << src.mreal << " mimage: " << src.mimage << endl;
+	return out;
+}
+
+//>>运算符重载
+istream& operator>>(istream& in, CComplex& src) {
+	in >> src.mreal >> src.mimage;
+	return in;
+}
+
+int main() {
+	CComplex comp1(10, 10);
+	CComplex comp2(20, 20);
+
+	//+运算符重载
+	CComplex comp3 = comp1 + comp2; // 对 +运算符的重载函数
+	comp3.show();
+
+	CComplex comp4 = comp1 + 20; //对 强制类型转换 int->CComplex
+	comp4.show();
+
+	//编译器做对象运算时 会调用对象的运算符重载函数(优先调用成员方法) 
+	//如果没有成员方法 就在全局作用域找合适的运算符重载函数
+	//将30生成一个实部为30 虚部为0的临时对象
+	CComplex comp5 = 30 + comp1; //错 没有把整型转为复数类型的函数
+	comp5.show();
+
+	//前置++和后置++重载
+	comp5 = comp1++; //++ -- 是单目运算符 operator++()->前置++  operator++(int)->后置++
+	comp1.show();
+	comp5.show();
+	comp5 = ++comp1;
+	comp1.show();
+	comp5.show();
+
+	//+=运算符重载
+	comp1 += comp2;
+	comp1.show();
+
+	cin >> comp1;
+	cin >> comp2;
+	cout << comp1 << endl;
+	cout << comp2 << endl;
+	return 0;
+}
