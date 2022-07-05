@@ -1,0 +1,203 @@
+#include<iostream>
+#include<string>
+using namespace std;
+
+//char arr[] = "jkhsdkf";
+class String {
+public:
+	//友元函数
+	friend ostream& operator<<(ostream& out, const String& str);
+	friend String operator+(const String& lhs, const String& rhs);
+
+	String(const char* p = nullptr) {
+		if (p != nullptr) {
+			//strlen计算的是有效字符的个数 计算上字符串结尾的'\0'要+1
+			_pstr = new char[strlen(p) + 1];
+			strcpy(_pstr, p);
+		}
+		//如果指针为空 将字符数组大小设为1 存放'\0'
+		else {
+			_pstr = new char[1];
+			*_pstr = '\0';
+		}
+	}
+
+	//拷贝构造函数
+	String(const String& src) {
+		_pstr = new char[strlen(src._pstr) + 1];
+		strcpy(_pstr, src._pstr);
+	}
+
+	//等号运算符重载
+	String& operator=(const String& src) {
+		//防止自赋值
+		if (this == &src) {
+			return *this;
+		}
+
+		//删除原空间
+		delete[] _pstr;
+
+		_pstr = new char[strlen(src._pstr)];
+
+		//复制
+		strcpy(_pstr, src._pstr);
+
+		return *this;
+	}
+
+	//>运算符重载
+	//只涉及读 不涉及写的方法最好设为常方法
+	bool operator>(const String& str) const {
+		return strcmp(_pstr, str._pstr) > 0;
+	}
+	
+	//<运算符重载
+	bool operator<(const String& str) const {
+		return strcmp(_pstr, str._pstr) < 0;
+	}
+	
+	//==运算符重载
+	bool operator==(const String& str) const {
+		return strcmp(_pstr, str._pstr) == 0;
+	}
+
+	//得到字符串长度
+	int length() const {
+		return strlen(this->_pstr);
+	}
+
+	//[]运算符重载 普通方法 既可以读index位置的元素 也可以修改
+	char& operator[] (int index) {
+		return _pstr[index];
+	}
+
+	//[]运算符重载 常方法 只可读不可以修改
+	const char& operator[] (int index) const {
+		return _pstr[index];
+	}
+
+	//返回字符串对象底层管理的char*
+	const char* c_str() const {
+		return _pstr;
+	}
+
+	//析构函数
+	~String() {
+		delete[] _pstr;
+		_pstr = nullptr;
+	}
+
+	//给String字符串类型提供迭代器的实现
+	class iterator {
+	public:
+		iterator(char* p = nullptr):_p(p) {}
+
+		//重载 != 运算符迭代器不相等就是 底层指针的不相等
+		bool operator !=(const iterator& it) {
+			return _p != it._p;
+		}
+
+		//重载++运算符 前置++不会产生临时对象 效率更高
+		void operator++() {
+			++_p;
+		}
+
+		char& operator*() {
+			return *_p;
+		}
+
+	private:
+		char* _p;
+	};
+
+	//以下2个是容器方法
+	//begin()返回的是容器底层首元素迭代器的表示
+	iterator begin() {
+		return iterator(_pstr);
+	}
+
+	//end()返回的是容器末尾元素后继位置迭代器的表示
+	iterator end() {
+		return iterator(_pstr + length());
+	}
+
+private:
+	char* _pstr;
+};
+
+//+运算符重载 没有delete 
+String operator+(const String& lhs, const String& rhs) {
+	//char* ptmp = new char[strlen(lhs._pstr) + strlen(rhs._pstr) + 1];
+	//strcpy(ptmp, lhs._pstr);
+	//strcat(ptmp, rhs._pstr);
+	////这种方式效率很低
+	//String tmp(ptmp);
+	//delete[] ptmp;
+	//return tmp;
+
+	String temp;
+	temp._pstr = new char[strlen(lhs._pstr) + strlen(rhs._pstr) + 1];
+
+	//拷贝时直接拷贝到函数中的局部对象中
+	strcpy(temp._pstr, lhs._pstr);
+	strcat(temp._pstr, rhs._pstr);
+	return temp;
+}
+
+//<<运算符重载
+ostream& operator<<(ostream& out, const String& str) {
+	out << str._pstr;
+	return out;
+}
+#if 0
+int main() {
+
+	String str1;
+	String str2("aaa"); //string(const char*)
+	String str3 = "bbb";
+	String str4 = str2 + str3;
+	String str5 = str2 + "ccc";
+	String str6 = "ddd" + str2;
+
+	if (str5 > str6) {
+		cout << str5 << " > " << str6 << endl;
+	}
+	else {
+		cout << str5 << " < " << str6 << endl;
+	}
+
+	int len = str6.length();
+	for (int i = 0; i < len; i++) {
+		cout << str6[i] << " ";
+	}
+	cout << endl;
+
+	//string -> char*
+	char buf[1024] = { 0 };
+	//c_str可以将对象管理的字符串返回为const char*类型
+	strcpy(buf, str6.c_str());
+	cout << "buf: " << buf << endl;
+
+	return 0;
+}
+
+#endif
+
+int main() {
+	String str1 = "hello world!"; //str1是一个底层放了一组char类型字符的容器
+
+	//容器迭代器类型
+	String::iterator it = str1.begin();
+
+	for (; it != str1.end(); ++it) {
+		cout << *it << " ";
+	}
+	cout << endl; 
+
+	//C++11 foreach的方式来遍历容器内部元素的值 -> 底层还是通过迭代器进行遍历的
+	for (char ch : str1) {
+		cout << ch << " ";
+	}
+	cout << endl;
+}
