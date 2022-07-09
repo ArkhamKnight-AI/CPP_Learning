@@ -197,7 +197,7 @@ public:
 	};
 
 	iterator begin() { return iterator(_first); }
-	iterator end() { return _last; }
+	iterator end() { return iterator(_last); }
 
 private:
 	T *_first; //指向数组起始的位置
