@@ -1,0 +1,430 @@
+#include<iostream>
+//#include<vector>
+using namespace std;
+
+#if 0
+int main() {
+	vector<int> vec;
+	for (int i = 0; i < 20; i++) {
+		vec.push_back(rand() % 100 + 1);
+	}
+
+	for (auto val : vec) {
+		cout << val << " ";
+	}
+	cout << endl;
+
+
+	//删除所有偶数元素
+	//vector<int>::iterator it = vec.begin();
+	////只有在偶数时才要删除 所以改为while循环
+	//while(it != vec.end()) {
+	//	if (*it % 2 == 0) {
+	//		it = vec.erase(it);
+	//	}
+	//	else {
+	//		it++;
+	//	}    
+	//}
+
+	
+	//给容器中所有的偶数前添加一个小于偶数值1的数字
+	vector<int>::iterator it1 = vec.begin();
+	for (; it1 != vec.end(); it1++) {
+		//迭代器失效问题：第一次调用erase后 迭代器it就失效了
+		if (*it1 % 2 == 0) {
+			it1 = vec.insert(it1, *it1 - 1);
+			//如果不++ 那么在下次循环++后依然到同一个偶数 所以要再++
+			++it1;
+		}
+	}
+
+	for (auto i : vec) {
+		cout << i << " ";
+	}
+	cout << endl;
+
+	return 0;
+}
+#endif
+
+/*
+vector容器中迭代器的实现
+迭代器失效问题
+*/
+
+/*
+空间配置器allocator
+template<class _Ty,
+		class _Alloc = allocator<_Ty>>
+		class vector
+*/
+
+//定义容器的空间配置器 和C++标准库的allocator实现一样
+template<typename T>
+struct Allocator
+{
+	//内存开辟 size_t是一个unsigned int类型
+	T* allocate(size_t size)
+	{
+		return (T*)malloc(sizeof(T) * size);
+	}
+
+	//内存释放
+	void deallocate(void *p) {
+		free(p);
+	}
+
+	//对象构造
+	//在指定地址p中植入值为val的对象
+	void construct(T *p, const T &val) {
+		//定位new 在指定的内存上构造一个值为val的对象 调用T类型对象的拷贝构造
+		new (p) T(val);
+	}
+
+	//对象析构
+	//将p指向的对象析构
+	void destroy(T *p) {
+		p->~T();//~T()代表T类型的析构函数
+	}
+};
+
+
+//容器底层内存开辟 内存释放 对象构造和析构 都通过allocator空间配置器来实现
+template<typename T, typename Alloc = Allocator<T>>
+class vector {
+public:
+	//如果没有Alloc = Alloator<T>这句话 添加进后面的参数列表中 则应写成如下形式
+	/*
+	vector(int size = 10, const Alloc &alloc = Allocator<T>
+		:_allocator(alloc)
+	*/
+	friend class vector<T, Alloc>;
+
+	//需要把内存开辟和对象构造分开处理
+	vector(int size = 10)
+	{
+		_first = _allocator.allocate(size);
+		_last = _first;
+		_end = _first + size;
+	}
+
+	//析构容器的 有效元素 然后释放_first指针指向的 堆内存
+	~vector() {
+		//delete[] _first;
+		//析构有效的元素 然后释放_first指针指向的堆内存
+		for (T *p = _first; p != _last; p++) {
+			_allocator.destroy(p); //把_first指针指向的数组的有效元素进行析构操作
+		}
+
+		_allocator.deallocate(_first); //释放堆上数组内存
+		_first = _last = _end = nullptr;
+	}
+
+	//拷贝构造函数 不省略<T>
+	vector(const vector<T>& rhs) {
+		int size = rhs._end - rhs._first;
+		//_first = new T[size];
+		_first = _allocator.allocate(size);
+		//有效数据的长度
+		int len = rhs._last - rhs._first;
+		//对有效数据部分进行赋值操作
+		for (int i = 0; i < len; i++) {
+			_allocator.construct(_first + i, rhs._first[i]);
+		}
+		_last = _first + len;
+		_end = _first + size;
+	}
+
+	//等号运算符=重载 返回引用是为了支持连续赋值
+	vector<T> operator=(const vector<T> &rhs) {
+		//防止自赋值
+		if (this == &rhs) return;
+
+		//释放原空间
+		//delete[] _first;
+		//把当前容器中的所有对象释放掉 再把容器内存释放掉
+		//先析构对象
+		for (T *p = _first; p != _last; p++) {
+			_allocator.destroy(p); //把_first指针指向的数组的有效元素进行析构操作
+		}
+		//再释放内存
+		_allocator.deallocate(_first); //释放堆上数组内存
+
+		//然后和拷贝构造一样
+		int size = rhs._end - rhs._first;
+		//_first = new T[size];
+		_first = _allocator.allocate(size);
+		//有效数据的长度
+		int len = rhs._last - rhs._first;
+		//对有效数据部分进行赋值操作
+		for (int i = 0; i < len; i++) {
+			_allocator.construct(_first + i, rhs._first[i]);
+		}
+		_last = _first + len;
+		_end = _first + size;
+	}
+
+	//向容器末尾添加元素
+	void push_back(const T& val) {
+		if (full()) {
+			expand();
+		}
+
+		//*_last++ = val;
+		//在_last指针指向的内存构造一个值为value的对象
+		_allocator.construct(_last, val);
+		_last++;
+	}
+
+	//从容器末尾删除元素 加入了verify
+	void pop_back() {
+		if (empty()) {
+			return;
+		}
+
+		//调用earse(it) 检查verify(it._ptr, _last) 如果在这个迭代器在区间里，就让其失效
+		//调用insert(it, val) 检查verify(it._ptr, _last);
+		//pop_back只用检查最后一个元素
+		verify(_last - 1, _last);
+
+		//不仅要把_last指针-- 还需要析构删除的元素
+		--_last;
+		_allocator.destroy(_last);
+	}
+
+	//返回容器末尾元素的值
+	T back() const {
+		return *(_last - 1);
+	}
+
+	//判断是否满
+	bool full() {
+		return _last == _end;
+	}
+
+	//判断是否为空
+	bool empty() {
+		return _first == _last;
+	}
+
+	//返回元素个数
+	int size() const {
+		return _last - _first;
+	}
+
+	T& operator[](int index) {
+		if (index < 0 || index >= size()) {
+			throw "OutOfRangeException";
+		}
+		return _first[index];
+	}
+
+	class iterator {
+	public:
+		//构造函数 将外界容器对象vector<T, Alloc> *pvec的地址传入 对迭代器进行初始化
+		iterator(vector<T, Alloc> *pvec = nullptr, T* ptr = nullptr)
+			:_ptr(ptr), _pVec(pvec)
+		{
+			Iterator_Base *itb = new Iterator_Base(this, _pVec->_head._next);
+			_pVec->_head._next = itb;
+		}
+
+		//前置++运算符重载
+		void operator++() {
+			//检查迭代器有效性
+			//执行插入时 从当前位置执行插入 会在当前位置到末尾进行搜索
+			//如果地址在检查范围区间 迭代器指向容器的指针就变成nullptr了
+			if (_pVec == nullptr) {
+				throw "iterator invalid";
+			}
+			_ptr++;
+		}
+
+		//*运算符重载 可以访问也可以修改 int data = *it; it = 20;
+		T& operator*() {
+			//检查迭代器有效性
+			if (_pVec == nullptr) {
+				throw "iterator invalid";
+			}
+			return *_ptr;
+		}
+
+		//*运算符重载 只可访问不可修改
+		const T& operator*() const {
+			//检查迭代器有效性
+			if (_pVec == nullptr) {
+				throw "iterator invalid";
+			}
+			return *_ptr;
+		}
+
+		//!=运算符重载
+		bool operator!=(const iterator& it) const {
+			//检查迭代器的有效性 
+			//(1)如果迭代器底层的指针指向的容器为空
+			//(2)当前迭代器所迭代的容器的地址和it迭代器所迭代的容器的地址不一样(不同容器)
+			if (_pVec == nullptr || _pVec != it._pVec) {
+				throw "iterator incompatable!";
+			}
+			return _ptr != it._ptr;
+		}
+
+	private:
+		T* _ptr; //指向当前容器底层的数据结构
+		//不同容器的迭代器是不能进行比较运算的，为了模拟这个过程
+		//给迭代器添加一个指向当前容器对象的指针
+		vector<T, Alloc>* _pVec; //指向迭代器迭代的容器对象
+	};
+	 
+	//这两个是容器的方法 this指向当前容器
+	iterator begin() { return iterator(this, _first); }
+	iterator end() { return iterator(this, _last); }
+
+	//verify->检查迭代器失效 遍历链表
+	void verify(T* first, T* last) {
+		//为什么要引用
+		Iterator_Base *pre = &this->_head; //指向链表的头结点
+		Iterator_Base *it = this->next._head; //指向第一个节点
+
+		//如果迭代器地址在检查的范围之内
+		while (it != nullptr) {
+			if (it->_cur->_ptr >= first && it->_cur->_ptr <= last) {
+				//迭代器失效 把iterator持有的容器指针置nullptr 指向为空说明迭代器失效 
+				it->_cur->_pVec = nullptr;
+				//删除当前迭代器节点 继续判断后面的迭代器节点是否失效
+				pre->_next = it->_next;
+				//删除节点
+				delete it;
+				//重置it
+				it = pre->_next;
+			}
+			else {
+				pre = it;
+				it = pre->next;
+			}
+		}
+	}
+
+	//自定义vector容器insert方法的实现
+	iterator insert(iterator it, const T& val) {
+		//1.不考虑扩容
+		//2.不考虑it._ptr的指针合法性
+		//从当前迭代器的位置 一直到有效元素后一个位置 检查有效性
+		verify(it._ptr - 1, _last);
+		T *p = _last;
+		while (p > it._ptr) {
+			//首先通过空间配置器在当前位置构造一个值为*(p-1)值的新对象
+			_allocator.construct(p, *(p - 1));
+			//析构p - 1位置的对象 释放空间
+			_allocator.destroy(p - 1);
+			p--;
+		}
+		_allocator.construct(p, val);
+		_last++;
+		//生成一个新的迭代器 传入当前容器对象的this指针
+		return iterator(this, p);
+	}
+	
+	//自定义vector容器的erase方法的实现
+	iterator erase(iterator it) {
+		//包含当前元素
+		verify(it._ptr - 1, _last);
+
+		T* p = it._ptr;
+		while (p < _last - 1) {
+			//析构当前位置的对象 释放空间
+			_allocator.destroy(p);
+			//通过空间配置器在当前位置构造一个值为后面对象值的对象
+			_allocator.construct(p, *(p + 1));
+			
+			p++;
+		}
+
+		//需要单独析构最后一个对象
+		_allocator.destroy(p);
+		_last--;
+		//给当前位置生成一个新的迭代器 当前位置的地址是it._ptr
+		return iterator(this, it._ptr);
+	}
+
+
+private:
+	T *_first; //指向数组起始的位置 
+	T *_last;  //指向数组中有效元素的后继位置
+	T *_end;   //指向数组空间的后继位置
+	Alloc _allocator; //定义容器的空间配置器对象
+
+	//容器迭代器失效增加代码 用链表记录用户从容器中获取的哪个容器的迭代器
+	struct Iterator_Base {
+		Iterator_Base(iterator* c = nullptr, Iterator_Base* n = nullptr)
+			:_cur(c), _next(n) {}
+
+		iterator* _cur; //指向某个迭代器的指针
+		Iterator_Base* _next; //指向下一个Iterator_Base节点的next地址
+	};
+
+	Iterator_Base _head;
+
+	//容器二倍扩容 
+	void expand() {
+		int size = _last - _first;
+		//T * temp = new T[2 * size];
+		//开辟空间 不要构造T类型无效对象
+		T *temp = _allocator.allocate(2 * size);
+
+		//拷贝元素
+		for (int i = 0; i < size; i++) {
+			_allocator.construct(temp + i, _first[i]);
+			temp[i] = _first[i];
+		}
+
+		//释放原空间 把有效元素进行析构 不需要全部析构
+		//delete[] _first;
+		for (T* p = _first; p != _last; p++) {
+			_allocator.destroy(p);
+		}
+		//释放原数组空间
+		_allocator.deallocate(_first);
+
+		_first = temp;
+		_last = _first + size;
+		_end = _first + 2 * size;
+	}
+};
+
+class Test {
+public:
+	Test() { cout << "Test()" << endl; }
+	~Test() { cout << "~Test()" << endl; }
+	Test(const Test& t) { cout << "Test(const Test&)" << endl; }
+};
+
+int main() {
+	vector<int> vec;
+	for (int i = 0; i < 20; i++) {
+		vec.push_back(rand() % 100 + 1);
+	}
+
+	vector<int>::iterator it = vec.begin();
+	//*解引用访问
+	for (; it != vec.end(); ++it) {
+		cout << *it << " ";
+	}
+	cout << endl;
+
+	//[]访问
+	int size = vec.size();
+	for (int i = 0; i < size; i++) {
+		cout << vec[i] << " ";
+	}
+	cout << endl;
+
+	//for_each访问
+	for (auto val : vec) {
+		cout << val << " ";
+	}
+	cout << endl;
+
+	return 0;
+}
