@@ -1,0 +1,92 @@
+#include<iostream>
+#include<vector>
+#include<string>
+using namespace std;
+
+/*
+new和delete
+*/
+
+//先调用operator new开辟内存空间 然后调用对象的构造函数(初始化)
+void* operator new(size_t size) {
+	void* p = malloc(size);
+
+	if (p == nullptr) {
+		throw bad_alloc();
+	}
+	cout << "operator new addr:" << p << endl;
+	return p;
+}
+
+//delete p; 调用p指向对象的析构函数 再调用Operator delete释放内存空间
+void operator delete(void* ptr) {
+	cout << "operator delete addr:" << ptr << endl;
+	free(ptr);
+}
+
+//-----------------------------------数组new和数组delete------------------------------------
+
+//先调用operator new开辟内存空间 然后调用对象的构造函数(初始化)
+void* operator new[](size_t size) {
+	void* p = malloc(size);
+
+	if (p == nullptr) {
+		throw bad_alloc();
+	}
+	cout << "operator new[] addr:" << p << endl;
+	return p;
+}
+
+//delete p; 调用p指向对象的析构函数 再调用Operator delete释放内存空间
+void operator delete[](void* ptr) {
+	cout << "operator delete[] addr:" << ptr << endl;
+	free(ptr);
+}
+
+//class Test {
+//public:
+//	Test(int data = 10) : ptr(new int(data)) { cout << "Test()" << endl; }
+//	~Test() { delete ptr; cout << "~Test()" << endl; }
+//
+//
+//private:
+//	int* ptr; 
+//};
+
+class Test {
+public:
+	Test(int data = 10){ cout << "Test()" << endl; }
+	~Test() { cout << "~Test()" << endl; }
+
+private:
+	int ma;
+};
+
+int main() {
+	/*Test *p1 = new Test();
+	delete p1;*/
+
+	Test *p2 = new Test[5];
+	cout << "p2:" << p2 << endl;
+	delete  p2;
+
+	return 0;
+}
+
+
+
+#if 0
+int main() {
+	//判断内存开辟失败 流程
+	try {
+		int *p = new int;
+		delete p;
+
+		int *q = new int[10];
+		delete[] q;
+	}
+	catch (const bad_alloc& err) {
+		cerr << err.what() << endl;
+	}
+}
+#endif
