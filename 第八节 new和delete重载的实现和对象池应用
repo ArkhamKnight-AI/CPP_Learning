@@ -1,0 +1,132 @@
+#include<iostream>
+using namespace std;
+
+/*
+运算符重载：可以实现成全局方法和成员方法
+对某个具体的类使用重载的new和delete
+内存池 进程池 线程池 连接池 对象池
+*/
+
+template<typename T>
+class Queue {
+public:
+	//构造函数
+	Queue() {
+		_front = _rear = new QueueItem();
+	}
+
+	~Queue()
+	{
+		QueueItem *cur = _front;
+		while (cur != nullptr) {
+			_front = _front->_next;
+			delete _front;
+			cur = _front;	
+		}
+	}
+
+	//入队操作
+	void push(const T& val) {
+		QueueItem* item = new QueueItem(val);
+		//将队尾元素的next指向队尾
+		_rear->_next = item;
+		//将item设置为队尾 _rear一直指向队尾元素 自己的_next指向自己？
+		_rear = item;
+	}
+
+	//出队操作
+	void pop() {
+		if (empty()) return;
+		//头删法删除元素
+		//_front是哨兵节点 first是真正的头结点
+		QueueItem* first = _front->_next;
+		//将第二个节点连在_front节点后 删除头结点
+		_front->_next = first->_next;
+
+		//如果只剩下一个元素 让_rear和_front指向同一空间 否则rear就没了
+		if (_front->_next == nullptr) {
+			_rear = _front;
+		}
+		//删除头结点
+		delete first;
+	}
+
+	//查看队头
+	T front() const {
+		return _front->_next->_data;
+	}
+
+	//判断是否为空
+	bool empty() {
+		return _front == _rear;
+	}
+private:
+	struct QueueItem
+	{
+		QueueItem(T data = T()) : _data(data), _next(nullptr) {}
+		//给QueueItem提供自定义内存管理 下面两个方法本身就是静态方法
+		//不能使用new QueueItem 因为会调用下面的new运算符重载函数
+		void* operator new(size_t size) {
+			//为空先创建对象池
+			if (_itemPool == nullptr) {
+				//强转为QueueItem类型
+				_itemPool = (QueueItem*)new char[POOL_ITEM_SIZE * sizeof(QueueItem)];
+				QueueItem* p = _itemPool;
+				//不可以遍历最后一个节点 因为最后一个节点为空
+				for (; p < _itemPool + POOL_ITEM_SIZE; ++p) {
+					p->_next = p + 1;
+				}
+
+				//最后一个节点指向nullptr
+				p->_next = nullptr;
+			}
+
+			//对象池不为空 说明里面有节点 直接返回给用户即可
+			QueueItem* p = _itemPool;
+			_itemPool = _itemPool->_next;
+			return p;
+		}
+		void operator delete(void* ptr) {
+			QueueItem* p = (QueueItem*)ptr;
+			//释放后把空间加到_itemPool的第一个节点
+			if (p != nullptr) {
+				p->_next = _itemPool;
+				_itemPool = p;
+			}
+		}
+
+		T _data;
+		QueueItem* _next;
+
+		//指向对象池的起始地址
+		static QueueItem* _itemPool;
+
+		//定义对象池的大小
+		static const int POOL_ITEM_SIZE = 100000;
+	};
+
+	QueueItem* _front;
+	QueueItem* _rear;
+};
+
+template<typename T>
+//编译器运行到这里时还没有用具体类型实例化对象 不确定作用域下的QueueItem*是什么
+//typename告诉编译器后面嵌套类作用域下的名字QueueItem是个类型 
+typename Queue<T>::QueueItem* Queue<T>::QueueItem::_itemPool = nullptr;
+
+int main() {
+	Queue<int> que;
+	//大量开辟和释放内存时 可以生成一个QueueItem的对象池
+	//释放内存直接释放到内存池中即可
+
+	for (int i = 0; i < 1000000; i++) {
+		que.push(i);
+		que.pop(); 
+	}
+	cout << que.empty() << endl;
+
+	int a = 10;
+	void* ptr = &a;
+	cout << ptr << endl;
+	return 0;
+}
