@@ -1,0 +1,42 @@
+#include<iostream>
+using namespace std;
+
+/*
+继承的本质和原理
+继承的本质：1.代码复用 2.
+*/
+
+class A {
+public:
+	int ma;
+protected:
+	int mb;
+private:
+	int mc; //自己或者友元可以访问私有的成员
+};
+
+//继承 A->基类/父类 B->派生类/子类
+class B : public A 
+{
+public:
+	void func() {
+		cout << mc << endl;
+	}
+	int md;  
+protected:
+	int me;
+private:
+	int mf;
+};
+
+class C : public B
+{
+	//在Cl里面 ma的访问限定是什么
+	//由于B中ma是私有的 所以C中ma是不可见的 可以继承 但无法访问 
+};
+
+int main() {
+	B b;
+	b.func();
+	return 0; 
+}
