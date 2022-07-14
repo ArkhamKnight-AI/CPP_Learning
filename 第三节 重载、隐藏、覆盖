@@ -1,0 +1,44 @@
+#include<iostream>
+#include<vector>
+using namespace std;
+
+/*
+重写、覆盖、隐藏
+*/
+
+enum  {
+	red = 1, orange, yellow, green, blue, violet, indigo, ultraviolet
+};
+
+class Base {
+public:
+	Base(int data = 10) : ma(data) {}
+	void show() { cout << "Base::show()" << endl; }
+	void show(int) { cout << "Base::show(int)" << endl; }
+private:
+	int ma;
+};
+
+class Derive : public Base {
+public: 
+	Derive(int data = 20) : Base(data), mb(data) {}
+	void show() { cout << "Derive::show()" << endl; }
+
+private:
+	int mb; 
+}; 
+
+ 
+
+int main() {
+	Base b(10);
+	Derive d(20);
+
+
+
+	Base* pb = &d;
+	pb->show();
+	pb->show(10);
+
+	return 0; 
+}
