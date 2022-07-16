@@ -1,0 +1,50 @@
+#include<iostream>
+#include<typeinfo>
+using namespace std;
+
+/*
+虚函数、静态绑定和动态绑定
+*/
+
+class Base {
+public:
+	Base(int data = 10) : ma(data) {}
+	//虚函数
+	virtual void show() {
+		cout << "Base::show()" << endl;
+	}
+
+	//虚函数 
+	virtual void show(int) {
+		cout << "Base::show(int)" << endl;
+	}
+protected: 
+	int ma;
+}; 
+
+class Derive : public Base {
+public:
+	Derive(int data): Base(data), mb(data) {}
+	//派生类中和基类中继承来的某个方法，如果参数名、参数列表和返回值都相同
+	//且基类中是virtual方法 那么派生类的这个方法 自动处理为虚函数 写不写virtual都是 
+	void show() {
+		cout << "Derive::show()" << endl;
+	}
+
+protected:
+	int mb;
+};
+
+int main() {
+	Derive d(50);
+	Base* pb = &d;
+	pb->show(); //调用派生类从基类继承的方法 静态(编译时期)绑定(函数调用) 
+	pb->show(10);
+
+	cout << sizeof(Base) << endl; //4
+	cout << sizeof(Derive) << endl; //8 
+	cout << typeid(pb).name() << endl; //class Base*
+	cout << typeid(*pb).name() << endl; //class Base
+
+	return 0; 
+}
