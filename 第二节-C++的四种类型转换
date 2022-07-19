@@ -1,0 +1,72 @@
+#include<iostream>
+using namespace std;
+
+/*
+C++语言级别提供的四种类型转换方式
+int a = (int)b;
+const_cast
+static_cast
+reinterpret_cast
+dynamic_cast
+*/
+
+class Base {
+public:
+	virtual void func() = 0;
+};
+
+class Derive1 : public Base{
+public:
+	void func() { cout << "call Derive1::func()" << endl; }
+};
+
+class Derive2 : public Base {
+public:
+	void func() { cout << "call Derive2::func()" << endl; }
+	//derive2实现新功能的API接口函数
+	void derive02func() { cout << "call Derive2::derive02func()" << endl; }
+};
+
+//使用dynamic_cast比较类型
+//如果是Derive02就调用derive02func()接口函数 
+void showFunc(Base* p) {
+	//dynamic_cast会检查p指针是否指向的是一个Derive2类型对象
+	//通过p所指向内存的vfptr指向的vftable中的RTTI信息查看是否为Derive2类型
+	//如果是，则dynamic_cast转换类型成功，返回Derive2对象的地址，否则返回nullptr
+	Derive2* pb2 = dynamic_cast<Derive2*>(p);
+
+	//Derive2* pb2 = static_cast<Derive2*>(p);
+	//可以进行Derive2* pb2 = static_cast<Derive2*>(p)类型转换 因为Base和Derive2类型有关联
+	//但转换后无法判断是Derive2对象还是Derive1对象 如果函数中要访问Derive2对象的成员变量 无法访问
+	//因为虽然是pb2虽然是Derive2类型的指针 但内存中只有Derive1类型的对象
+
+	if (pb2 != nullptr) {
+		pb2->derive02func(); 
+	}
+	else {
+		p->func(); //动态绑定
+	}
+}
+
+int main() {
+	//const cast
+	/*const int a = 10;
+	int* p1 = (int*)&a;
+
+	int* p2 = const_cast<int*>(&a); */
+
+	//static cast 基类类型与派生类类型可以用static_cast转换
+	//int* p = nullptr;
+	//short* b = static_cast<int*>(p); 失败 两个类型之间没有任何联系转换会失败
+	//double* b = static_cast<double*>(p); 不安全 
+	int a = 10;
+	char b = static_cast<int>(a); //把b转换为ASCII码表中10对应的字符
+
+	//dynamic_cast
+	Derive1 d1;
+	Derive2 d2;
+	showFunc(&d1);
+	showFunc(&d2);
+
+	return 0;
+}
