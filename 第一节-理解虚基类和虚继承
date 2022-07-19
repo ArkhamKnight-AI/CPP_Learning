@@ -1,0 +1,39 @@
+#include<iostream>
+using namespace std;
+
+/*
+抽象类(有纯虚函数的类)/虚基类
+*/
+
+class A {
+public:
+	virtual void func() { cout << "call A::func" << endl; }
+	void operator delete(void* ptr) {
+		cout << "Operator p:" << ptr << endl;
+		free(ptr);
+	}
+private:
+	int ma;
+};
+
+class B : virtual public A {
+public:
+	void func() { cout << "call B::func" << endl; }
+
+	void* operator new(size_t size) {
+		void* p = malloc(size);
+		cout << "operator new p:" << endl;
+		return p;
+	}
+private:
+	int mb;
+};
+
+int main() {
+	B b;
+	A* p = &b;
+	cout << "main p: " << p << endl;
+	p->func();
+
+	return 0;
+}
