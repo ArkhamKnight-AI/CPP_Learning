@@ -1,0 +1,63 @@
+#include<iostream>
+#include<queue>
+#include<vector>
+using namespace std;
+
+struct TreeNode {
+	int val;
+	TreeNode* left;
+	TreeNode* right;
+	TreeNode(int v) : val(v), left(nullptr), right(nullptr) {} 
+};
+
+/*
+函数对象 => C语言中的函数指针 
+*/
+ 
+
+//如何既能实现大于比较又能实现小于比较？
+//使用C语言的函数指针方案
+//template<typename T>
+//bool mygreater(T a, T b) {
+//	return a > b;
+//}
+//
+//template<typename T>
+//bool myless(T a, T b) {
+//	return a < b;
+//}
+//
+//template<typename T, typename Compare>
+//bool compare(T a, T b, Compare comp) {
+//	return comp(a, b);
+//}
+
+//C语言中的函数指针无法写成内联函数，调用开销较大，因此使用C++的函数对象
+template<typename T>
+class mygreater {
+public:
+	bool operator()(T a, T b) {
+		return a > b;
+	}
+};
+
+template<typename T>
+class myless {
+public:
+	bool operator()(T a, T b) {
+		return a < b;
+	}
+};
+
+template<typename T, typename Compare>
+bool compare(T a, T b, Compare comp) {
+	return comp(a, b);
+}
+
+int main() {
+	vector<int> vec;
+	priority_queue<int, vector<int>, less<int>>;
+	cout << compare(10, 20, mygreater<int>()) << endl; 
+	cout << compare(10, 20, myless<int>()) << endl;
+	return 0;
+} 
