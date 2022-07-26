@@ -1,0 +1,63 @@
+#include<iostream>
+#include<vector>
+#include<memory>
+using namespace std;
+
+template<typename T>
+class CSmartPtr {
+public:
+	CSmartPtr(T* ptr = nullptr)
+		:mptr(ptr) {}
+
+	//重新定义拷贝构造函数
+	CSmartPtr(const CSmartPtr<T>& src) {
+		mptr = new T(*src.mptr);
+	}
+
+	~CSmartPtr() {
+		delete mptr;
+	}
+
+	//重载*运算符 只是返回智能指针类上的mptr成员
+	//返回引用是因为要改变对象本身的值
+	T& operator*() {
+		return *mptr;
+	}
+
+	//->运算符重载
+	T* operator->() {
+		return mptr;
+	}
+
+private:
+	T* mptr;
+};
+
+//template<typename T> 
+//unique_ptr<T> getSmartPtr() {
+//	unique_ptr ptr(nwe T());
+//	return ptr;
+// unique_ptr<int> ptr = getSmartPtr<int>();
+//}
+
+
+int main() {
+	/*
+	不带引用计数的智能指针
+	1.auto_ptr:C++库
+	C++11新标准(memory头文件):
+	2.scoped_ptr
+	3.unique_ptr   
+	怎么解决浅拷贝发生的问题
+	*/
+	/*CSmartPtr<int> p1(new int);
+	CSmartPtr<int> p2(p1);*/
+
+	/*auto_ptr<int> ptr1(new int());
+	auto_ptr<int> ptr2(ptr1);*/
+	
+	unique_ptr<int> ptr1(new int());
+	unique_ptr<int> ptr2(std::move(ptr1));  
+
+	return 0;
+}  
