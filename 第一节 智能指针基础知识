@@ -1,0 +1,52 @@
+#include<iostream>
+#include<vector>
+#include<memory>
+using namespace std;
+
+/*
+智能指针 保证做到资源的自动释放！
+*/
+template<typename T>
+class CSmartPtr {
+public:
+	CSmartPtr(T* ptr = nullptr)
+		:mptr(ptr) {}
+
+	~CSmartPtr() {
+		delete mptr;
+	}
+
+	//重载*运算符 只是返回智能指针类上的mptr成员
+	//返回引用是因为要改变对象本身的值
+	T& operator*() {
+		return *mptr;
+	}
+
+	//->运算符重载
+	T* operator->() {
+		return mptr;
+	}
+
+private:
+	T* mptr;
+};
+
+
+
+int main() {
+	CSmartPtr<int> ptr1(new int);
+
+	*ptr1 = 20;
+
+	class Test {
+	public:
+		void test() { cout << "call Test:: test" << endl; }
+	};
+	
+	CSmartPtr<Test> ptr2(new Test());
+	// (ptr2.operator->()) 返回的结果 调用 test方法
+	//返回智能指针底层管理的指针
+	ptr2->test();
+
+	return 0;
+}  
