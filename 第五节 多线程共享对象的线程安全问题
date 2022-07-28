@@ -1,0 +1,52 @@
+#include<iostream>
+#include<memory>
+#include<thread> //线程库
+using namespace std;
+
+//C++多线程访问共享对象的线程安全问题
+//C++著名的开源网络库muduo库
+class A {
+public:
+	A() { cout << "A()" << endl; }
+	~A() { cout << "~A()" << endl; }
+	void testA() { cout << "非常好用的函数" << endl; }
+};
+
+//子线程  
+void handler01(weak_ptr<A> pw) {
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+	//q访问A对象时 需要侦测一下对下A对象是否存活
+	//先将弱指针提升为强指针
+	shared_ptr<A> sp = pw.lock();
+	if (sp) {
+		sp->testA();
+	}
+	else {
+		cout << "A对象已经析构，不能再访问!" << endl;
+	}
+}
+
+//main线程
+int main() {
+	{
+		//引入强弱指针解决线程安全问题
+		shared_ptr<A> p(new A());
+
+		//定义线程对象
+		//生成线程后立刻释放 析构了A类型对象 还想要访问它的方法
+		thread t1(handler01, weak_ptr<A>(p));
+		t1.detach();
+		std::this_thread::sleep_for(std::chrono::seconds(2));
+	}
+	
+
+	//睡两秒再释放资源
+	//主线程睡两秒再释放
+	//std::this_thread::sleep_for(std::chrono::seconds(2));
+
+	//子线程启动资源 然后等待20s
+	std::this_thread::sleep_for(std::chrono::seconds(20));
+	//t1.join(); //阻塞等待子线程结束
+	
+	return 0;
+}
