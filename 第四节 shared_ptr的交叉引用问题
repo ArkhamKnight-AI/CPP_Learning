@@ -1,0 +1,49 @@
+#include<iostream>
+#include<vector>
+#include<memory>
+using namespace std;
+
+/*
+shared_ptr:强智能指针 可以改变资源的引用计数
+weak_prt:弱智能指针  不可以改变资源的引用计数
+*/
+
+class B;
+class A{
+public:
+	A() { cout << "A()" << endl; }
+	~A() { cout << "~A()" << endl; }
+	
+	void testA() { cout << "非常好用的函数" << endl; }
+
+	weak_ptr<B> _ptrb;
+};
+
+class B {
+public:
+	B() { cout << "B()" << endl; }
+	~B() { cout << "~B()" << endl; }
+
+	//无法调用 只会观察资源 无法使用资源  所以不能使用->和*
+	void func() {
+		//要想使用weak_ptr 首先要使用weak_ptr的lock方法
+		shared_ptr<A> ps = _ptra.lock(); 
+		if (!ps) {
+			ps->testA();
+		}
+	}
+
+	weak_ptr<A> _ptra;
+};
+
+int main() {
+	shared_ptr<A> pa(new A());
+	shared_ptr<B> pb(new B());
+
+	pa->_ptrb = pb;
+	pb->_ptra = pa;
+	cout << pa.use_count() << endl;
+	cout << pb.use_count() << endl;
+
+	return 0;
+}
