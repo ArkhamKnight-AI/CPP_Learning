@@ -1,0 +1,111 @@
+#include<iostream>
+#include<vector>
+#include<memory>
+using namespace std;
+
+/*
+对资源进行引用计数的类
+*/
+template<typename T>
+class RefCnt {
+public:
+	RefCnt(T* ptr = nullptr)
+		:mptr(ptr) {
+		if (mptr != nullptr) {
+			mcount = 1;
+		}
+	}
+
+	void addRef() { mcount++; } //增加指针指向资源的引用计数
+	
+	int deleteRef() { return --mcount; }
+
+private:
+	T* mptr;
+	int mcount; //atomic_int CAS 原子整型 保证线程安全
+};
+
+//智能指针类 与shared_ptr相比不是线程安全的
+//shared_ptr和weak_ptr是线程安全的
+template<typename T>
+class CSmartPtr {
+public:
+	CSmartPtr(T* ptr = nullptr)
+		:mptr(ptr) {
+		//给mptr构建了一个引用计数对象
+		mpRefCnt = new RefCnt<T>(mptr);
+	}
+
+	//拷贝构造函数
+	CSmartPtr(const CSmartPtr<T>& src)
+		:mptr(src.mptr), mpRefCnt(src.mpRefCnt)
+	{
+		if (mptr != nullptr) {
+			mpRefCnt->addRef();
+		}
+	}
+
+	//析构函数
+	~CSmartPtr() {
+		//只有当其引用计数对象的引用计数减为0才进行delete
+		if (mpRefCnt->deleteRef() == 0) {
+			delete mptr;
+			mptr = nullptr;
+		}
+	}
+
+	//赋值运算符重载
+	CSmartPtr<T>& operator=(const CSmartPtr<T>& src) {
+		//防止自赋值
+		if (this == &src) {
+			return *this;
+		}
+		
+		//(1)先处理好当前左侧智能指针指向的资源
+		//=运算符重载是针对左侧智能指针而言的
+		//减去1次引用计数是因为左侧的智能指针现在要指向一个新的资源了 那么指向当前左侧智能指针指向资源的智能指针就少了一个
+		//如果--后没有智能指针指向该资源了 那么就要将它delete
+		if (mpRefCnt->delRef()) {
+			delete mptr;
+		}
+
+
+		//(2)再进行赋值操作
+		//指向同一个资源
+		mptr = src.mptr;
+		mpRefCnt = src.mpRefCnt;
+
+		//给当前资源增加了一个引用计数
+		mpRefCnt->addRef();
+		return *this;
+	}
+
+
+	//重载*运算符 只是返回智能指针类上的mptr成员
+	//返回引用是因为要改变对象本身的值
+	T& operator*() {
+		return *mptr;
+	}
+
+	//->运算符重载
+	T* operator->() {
+		return mptr;
+	}
+
+
+private:
+	T* mptr; //指向资源的指针
+	RefCnt<T>* mpRefCnt; //指向该资源引用计数对象的指针
+};
+
+
+int main() {
+	CSmartPtr<int> ptr1 = new int;
+	CSmartPtr<int> ptr2(ptr1);
+	CSmartPtr<int> ptr3 = ptr2;
+
+	*ptr1 = 20;
+	cout << *ptr2 << " " << *ptr3 << endl;
+
+	return 0;
+}
