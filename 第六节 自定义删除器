@@ -1,0 +1,69 @@
+#include<iostream>
+#include<vector>
+#include<functional>
+using namespace std;
+
+/*
+~unique_ptr(){是一个函数对象的调用 delete(ptr)}
+智能指针：能够保证资源绝对释放
+
+编译器提供释放资源的deletor就是()运算符重载
+template<typename T>
+class Deletor
+{
+public:
+	void operator()(T* ptr)
+	{
+		delete ptr;
+	}
+}
+
+但有时需要释放数组资源或者文件资源 不能直接delete 而要定义函数对象对deletor进行()运算符重载
+使用lambda表达式可以更加简洁地做到这一点
+*/ 
+
+//数组资源
+template<typename T>
+class MyDeletor{
+public:
+	void operator()(T* ptr) {
+		cout << "call MyDeletor.operator()" << endl;
+		delete[] ptr;
+	} 
+};
+
+//文件资源
+template<typename T>
+class MyFileDeletor {
+public:
+	void operator()(T* ptr) {
+		cout << "call MyFileDeletor.operator()" << endl;
+		fclose(ptr); //释放文件资源
+	}
+};
+
+int main() {
+	//栈上的智能指针调用析构函数时 调用()重载函数就是释放资源
+	//unique_ptr<int, MyDeletor<int>> ptr1(new int[100]); //delete[]
+	//unique_ptr<FILE, MyFileDeletor<FILE>> ptr2(fopen("data.txt", "w"));
+
+	//lambda表达式 => 函数对象 function函数对象类型 可以确定lambda表达式的类型
+	//使用function需要包含functional头文件 返回值为void 参数类型为int*
+	//将lambda表达式中的函数对象看做()运算符重载
+	unique_ptr<int, function<void (int *)>> ptr1(new int[100], 
+		[](int* p)->void { //[]捕获外部变量 int*是参数列表 void是返回值类型
+		cout << "call lambda release new int[100]" << endl;
+		delete[] p;
+		}
+	);
+
+
+	unique_ptr<FILE, function<void(FILE *)>> ptr2(fopen("data.txt", "w"),
+		[](FILE* p)->void { //[]捕获外部变量 int*是参数列表 void是返回值类型
+		cout << "call lambda release new fopen" << endl;
+		fclose(p);
+		}
+	);
+
+	return 0;
+}
