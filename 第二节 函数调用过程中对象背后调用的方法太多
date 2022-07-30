@@ -37,7 +37,7 @@ private:
 //不可以返回局部对象或者临时对象的指针或者引用
 Test GetObject(Test t) {
 	int val = t.getData();
-	 Test temp(val);
+	Test temp(val);
 	return temp; 
 }
  
