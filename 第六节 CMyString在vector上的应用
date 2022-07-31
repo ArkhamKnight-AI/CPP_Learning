@@ -1,0 +1,154 @@
+#include<iostream>
+#include<vector>
+using namespace std;
+
+/*
+添加带右值引用参数的拷贝构造函数和赋值函数
+*/
+
+class CMyString
+{
+public:
+	friend CMyString operator+(const CMyString& lhs, const CMyString& rhs);
+	friend ostream& operator<<(ostream& out, const CMyString& str);
+	CMyString(const char *str = nullptr)
+	{
+		cout << "CMyString(const char*)" << endl;
+		if (str != nullptr)
+		{
+			//要加上‘\0’ 
+			mptr = new char[strlen(str) + 1];
+			strcpy(mptr, str);
+		}
+		else
+		{
+			mptr = new char[1];
+			*mptr = '\0';
+		}
+	}
+	~CMyString()
+	{
+		cout << "~CMyString" << endl;
+		delete[]mptr;
+		mptr = nullptr;
+	}
+
+	// 带左值引用参数的拷贝构造
+	CMyString(const CMyString &str)
+	{
+		cout << "CMyString(const CMyString&)" << endl;
+		mptr = new char[strlen(str.mptr) + 1];
+		strcpy(mptr, str.mptr);
+	}
+
+	// 带右值引用参数的拷贝构造 使用临时对象进行拷贝构造
+	CMyString(CMyString&& str) {
+		cout << "CMyString(CMyString&&)" << endl;
+		mptr = str.mptr; //直接把临时变量的资源给当前对象
+		str.mptr = nullptr;
+	}
+	
+	// 带左值引用参数的赋值重载函数
+	CMyString& operator=(const CMyString &str)
+	{
+		cout << "operator=(const CMyString&)" << endl;
+		if (this == &str)
+			return *this;
+
+		delete[]mptr;
+
+		mptr = new char[strlen(str.mptr) + 1];
+		strcpy(mptr, str.mptr);
+		return *this;
+	}
+
+	// 带右值引用参数的赋值重载函数 临时对象
+	CMyString& operator=(CMyString &&str)
+	{
+		cout << "CMyString& operator=(CMyString&&)" << endl;
+		if (this == &str)
+			return *this;
+
+		delete[]  mptr;
+
+		mptr = str.mptr;
+		str.mptr = nullptr;
+		return *this;
+	}
+
+	//将string类型转换为const char*类型
+	const char* c_str() const { return mptr; }
+	
+private:
+	char *mptr;
+};
+
+//有new没有delete 返回局部对象无法释放堆内存
+//CMyString operator+(const CMyString& lhs, const CMyString& rhs) {
+//	char* ptmp = new char[strlen(lhs.mptr) + strlen(rhs.mptr) + 1];
+//	strcpy(ptmp, lhs.mptr);
+//	strcat(ptmp, rhs.mptr);
+//	//返回局部对象无法释放堆内存 因为没有响应的delete操作 所以这里先要把对象构建出来
+//	CMyString tmpstr(ptmp);
+//	
+//	//然后再释放内存
+//	delete[] ptmp;
+//	return tmpstr;
+//}
+
+//上面代码可以更换一种写法
+CMyString operator+(const CMyString& lhs, const CMyString& rhs) {
+	CMyString tmpStr;
+	tmpStr.mptr = new char[strlen(lhs.mptr) + strlen(rhs.mptr) + 1];
+	strcpy(tmpStr.mptr, lhs.mptr);
+	strcat(tmpStr.mptr, rhs.mptr);
+	return tmpStr; //这里要调用拷贝构造函数 拷贝构造str3
+}
+ 
+CMyString GetString(CMyString& str) {
+	const char* pstr = str.c_str();
+	CMyString tempStr(pstr);
+	return tempStr;
+}
+
+//输出运算符重载
+ostream& operator<<(ostream& out, const CMyString& str) {
+	out << str.mptr;
+	return out;
+}
+
+#if 0
+int main()
+{
+	CMyString str1 = "hello ";
+	CMyString str2 = "world";
+	cout << "------------------------" << endl;
+	CMyString str3 = str1 + str2;
+	cout << "------------------------" << endl; 
+	cout << str3 << endl;
+	cout << "------------------------" << endl;
+
+	//一道面试题
+	vector<CMyString> vec;
+	vec.reserve(10); //防止vector扩容
+	vec.push_back(str1);
+	vec.push_back(CMyString("bbb"));
+
+	return 0;
+}
+#endif
+
+
+int main() 
+{
+	//一道笔试题
+	CMyString str1 = "aaa";
+	vector<CMyString> vec;
+	vec.reserve(10);
+	cout << "-------------------------------" << endl;
+	vec.push_back(str1);
+	vec.push_back(CMyString("bbb")); 
+	cout << "-------------------------------" << endl;
+
+	return 0;
+}
