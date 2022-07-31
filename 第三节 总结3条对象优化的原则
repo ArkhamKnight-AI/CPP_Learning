@@ -1,0 +1,52 @@
+#include<iostream>
+#include<vector>
+using namespace std;
+
+/*
+3条对象优化的原则：
+(1)函数参数传递过程中，对象有限按照引用传递，不要按值传递
+(2)
+*/
+
+class Test {
+public:
+	//写了这个构造函数 相当于写了3个：
+	//(1)全部默认值 Test() (2)传给ma Test(10) (3)传给ma, mb Test(10, 10)
+	Test(int data = 10)
+		:ma(data) {
+		cout << "Test(int)" << endl;
+	}
+
+	~Test() { cout << "~Test()" << endl; }
+
+	//拷贝构造
+	Test(const Test& t) : ma(t.ma) { cout << "Test(const Test& t)" << endl; }
+
+	//赋值运算符重载
+	void operator=(const Test& t) {
+		cout << "operator=" << endl;
+		ma = t.ma;
+	}
+
+	int getData() const { 
+		return ma;
+	}
+
+private:
+	int ma;
+};
+ 
+Test GetObject(Test& t) {
+	int val = t.getData();
+	/*Test temp(val);
+	return temp;*/
+	return Test(val);
+}
+
+int main() {
+	Test t1;
+	/*Test t2;
+	t2 = GetObject(t1);*/
+	Test t2 = GetObject(t1);
+	return 0;
+} 
