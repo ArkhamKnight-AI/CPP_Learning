@@ -1,0 +1,115 @@
+#include<iostream>
+#include<vector>
+using namespace std;
+
+/*
+添加带右值引用参数的拷贝构造函数和赋值函数
+*/
+
+class CMyString
+{
+public:
+	CMyString(const char *str = nullptr)
+	{
+		cout << "CMyString(const char*)" << endl;
+		if (str != nullptr)
+		{
+			//要加上‘\0’ 
+			mptr = new char[strlen(str) + 1];
+			strcpy(mptr, str);
+		}
+		else
+		{
+			mptr = new char[1];
+			*mptr = '\0';
+		}
+	}
+	~CMyString()
+	{
+		cout << "~CMyString" << endl;
+		delete[]mptr;
+		mptr = nullptr;
+	}
+
+	// 带左值引用参数的拷贝构造
+	CMyString(const CMyString &str)
+	{
+		cout << "CMyString(const CMyString&)" << endl;
+		mptr = new char[strlen(str.mptr) + 1];
+		strcpy(mptr, str.mptr);
+	}
+
+	// 带右值引用参数的拷贝构造 使用临时对象进行拷贝构造
+	CMyString(CMyString&& str) {
+		cout << "CMyString(CMyString&&)" << endl;
+		mptr = str.mptr; //直接把临时变量的资源给当前对象
+		str.mptr = nullptr;
+	}
+	
+	// 带左值引用参数的赋值重载函数
+	CMyString& operator=(const CMyString &str)
+	{
+		cout << "operator=(const CMyString&)" << endl;
+		if (this == &str)
+			return *this;
+
+		delete[]mptr;
+
+		mptr = new char[strlen(str.mptr) + 1];
+		strcpy(mptr, str.mptr);
+		return *this;
+	}
+
+	// 带右值引用参数的赋值重载函数 临时对象
+	CMyString& operator=(CMyString &&str)
+	{
+		cout << "CMyString& operator=(CMyString&&)" << endl;
+		if (this == &str)
+			return *this;
+
+		delete[]  mptr;
+
+		mptr = str.mptr;
+		str.mptr = nullptr;
+		return *this;
+	}
+
+	//将string类型转换为const char*类型
+	const char* c_str() const { return mptr; }
+	
+private:
+	char *mptr;
+};
+ 
+CMyString GetString(CMyString& str) {
+	const char* pstr = str.c_str();
+	CMyString tempStr(pstr);
+	return tempStr;
+}
+
+int main()
+{
+	CMyString str1("aaaaaaaaaaaaaaaaaaaaaaaaa");
+	CMyString str2;
+	str2 = GetString(str1);
+	cout << str2.c_str() << endl;
+
+	return 0;
+}
+
+#if 0
+int main()  
+{
+	int a = 10;
+	int &b = a;
+	//int &&c = a; //无法将左值绑定到右值引用
+	//int &c = 20; //不能用左值应用绑定一个右值
+	const int& c = 20; //生成临时量 int temp = 20; 然后把c绑定到临时量temp上
+	int &&d = 20;
+
+	//const CMyString& e = CMyString("aaa")
+	CMyString&& e = CMyString("aaa");	//采用右值引用或者常引用 
+
+	return 0;
+}
+#endif
