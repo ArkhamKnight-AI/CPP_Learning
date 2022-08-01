@@ -1,0 +1,437 @@
+#include <iostream>
+using namespace std;
+
+// 定义容器的空间配置器，和C++标准库的allocator实现一样
+template<typename T>
+struct Allocator
+{
+	T* allocate(size_t size) // 负责内存开辟
+	{
+		return (T*)malloc(sizeof(T) * size);
+	}
+	 
+	void deallocate(void *p) // 负责内存释放
+	{
+		free(p);
+	}
+
+	//左值引用的构造函数
+	//void construct(T *p, const T &val) // 负责对象构造
+	//{
+	//	new (p) T(val); // 定位new
+	//}
+	////右值引用的构造函数 右值引用变量val本身是一个左值 所以还是匹配左值应用构造函数
+	//void construct(T *p, T &&val) // 负责对象构造
+	//{
+	//	new (p) T(std::move(val)); // 定位new
+	//}
+
+	//使用forward减少代码量
+	template<typename Ty>
+	//这里指针就是T类型的 只要val要判断是左值还是右值类型
+	void construct(T *p, Ty&& val){
+		new (p) T(std::forward<Ty>(val));
+	}
+
+	void destroy(T *p) // 负责对象析构
+	{
+		p->~T(); // ~T()代表了T类型的析构函数
+	}
+};
+
+/*
+容器底层内存开辟，内存释放，对象构造和析构，都通过allocator空间配置器来实现
+*/
+template<typename T, typename Alloc = Allocator<T>>
+class vector
+{
+public:
+	vector(int size = 10)
+	{
+		// 需要把内存开辟和对象构造分开处理
+		//_first = new T[size];
+		_first = _allocator.allocate(size);
+		_last = _first;
+		_end = _first + size;
+	}
+	~vector()
+	{
+		// 析构容器有效的元素，然后释放_first指针指向的堆内存
+		// delete[]_first;
+		for (T *p = _first; p != _last; ++p)
+		{
+			_allocator.destroy(p); // 把_first指针指向的数组的有效元素进行析构操作
+		}
+		_allocator.deallocate(_first); // 释放堆上的数组内存
+		_first = _last = _end = nullptr;
+	}
+	vector(const vector<T> &rhs)
+	{
+		int size = rhs._end - rhs._first;
+		//_first = new T[size];
+		_first = _allocator.allocate(size);
+		int len = rhs._last - rhs._first;
+		for (int i = 0; i < len; ++i)
+		{
+			//_first[i] = rhs._first[i];
+			_allocator.construct(_first + i, rhs._first[i]);
+		}
+		_last = _first + len;
+		_end = _first + size;
+	}
+	vector<T>& operator=(const vector<T> &rhs)
+	{
+		if (this == &rhs)
+			return *this;
+
+		//delete[]_first;
+		for (T *p = _first; p != _last; ++p)
+		{
+			_allocator.destroy(p); // 把_first指针指向的数组的有效元素进行析构操作
+		}
+		_allocator.deallocate(_first);
+
+		int size = rhs._end - rhs._first;
+		//_first = new T[size];
+		_first = _allocator.allocate(size);
+		int len = rhs._last - rhs._first;
+		for (int i = 0; i < len; ++i)
+		{
+			//_first[i] = rhs._first[i];
+			_allocator.construct(_first + i, rhs._first[i]);
+		}
+		_last = _first + len;
+		_end = _first + size;
+		return *this;
+	}
+	
+	void pop_back() // 从容器末尾删除元素
+	{
+		if (empty())
+			return;
+		// erase(it);  verify(it._ptr, _last);
+		// insert(it, val); verify(it._ptr, _last);
+		verify(_last - 1, _last);
+		//--_last; // 不仅要把_last指针--，还需要析构删除的元素
+		--_last;
+		_allocator.destroy(_last);
+	}
+	T back()const // 返回容器末尾的元素的值
+	{
+		return *(_last - 1);
+	}
+	bool full()const { return _last == _end; }
+	bool empty()const { return _first == _last; }
+	int size()const { return _last - _first; }
+	T& operator[](int index) // vec[2]
+	{
+		if (index < 0 || index >= size())
+		{
+			throw "OutOfRangeException";
+		}
+		return _first[index];
+	}
+
+	// insert erase
+	// #1迭代器一般实现成容器的嵌套类型
+	class iterator
+	{
+	public:
+		friend class vector<T, Alloc>;
+		iterator(vector<T, Alloc> *pvec = nullptr
+			, T *ptr = nullptr)
+			:_ptr(ptr), _pVec(pvec)
+		{ 
+			Iterator_Base *itb =
+				new Iterator_Base(this, _pVec->_head._next);
+			_pVec->_head._next = itb;
+		}
+		bool operator!=(const iterator &it)const
+		{
+			// 检查迭代器的有效性
+			if (_pVec == nullptr || _pVec != it._pVec)
+			{
+				throw "iterator incompatable!";
+			}
+			return _ptr != it._ptr;
+		}
+		void operator++()
+		{
+			// 检查迭代器的有效性
+			if (_pVec == nullptr)
+			{
+				throw "iterator invalid!";
+			}
+			_ptr++;
+		}
+		T& operator*()
+		{
+			// 检查迭代器的有效性
+			if (_pVec == nullptr)
+			{
+				throw "iterator invalid!";
+			}
+			return *_ptr;
+		}
+		const T& operator*()const
+		{
+			// 检查迭代器的有效性
+			if (_pVec == nullptr)
+			{
+				throw "iterator invalid!";
+			}
+			return *_ptr;
+		}
+	private:
+		T *_ptr;
+		// 当前迭代器迭代器是哪个容器对象
+		vector<T, Alloc> *_pVec;
+	};
+	// 需要给容器提供begin和end方法
+	iterator begin() { return iterator(this, _first); }
+	iterator end() { return iterator(this, _last); }
+
+	// 检查迭代器失效
+	void verify(T *first, T *last)
+	{
+		Iterator_Base *pre = &this->_head;
+		Iterator_Base *it = this->_head._next;
+		while (it != nullptr)
+		{
+			if (it->_cur->_ptr > first && it->_cur->_ptr <= last)
+			{
+				// 迭代器失效，把iterator持有的容器指针置nullptr
+				it->_cur->_pVec = nullptr;
+				// 删除当前迭代器节点，继续判断后面的迭代器节点是否失效
+				pre->_next = it->_next;
+				delete it;
+				it = pre->_next;
+			}
+			else
+			{
+				pre = it;
+				it = it->_next;
+			}
+		}
+	}
+
+	// 自定义vector容器insert方法的实现
+	iterator insert(iterator it, const T &val)
+	{
+		/*
+		1.不考虑扩容 verify(_first - 1, _last);
+		2.不考虑it._ptr的指针合法性
+		*/
+		verify(it._ptr - 1, _last);
+		T *p = _last;
+		while (p > it._ptr)
+		{
+			_allocator.construct(p, *(p - 1));
+			_allocator.destroy(p - 1);
+			p--;
+		}
+		_allocator.construct(p, val);
+		_last++;
+		return iterator(this, p);
+	}
+
+	// 自定义vector容器erase方法的实现
+	iterator erase(iterator it)
+	{
+		verify(it._ptr - 1, _last);
+		T *p = it._ptr;
+		while (p < _last - 1)
+		{
+			_allocator.destroy(p);
+			_allocator.construct(p, *(p + 1));
+			p++;
+		}
+		_allocator.destroy(p);
+		_last--;
+		return iterator(this, it._ptr);
+	}
+
+	//void push_back(const T &val) // 向容器末尾添加元素 接收左值
+	//{
+	//	if (full())
+	//		expand();
+	//	//*_last++ = val;   _last指针指向的内存构造一个值为val的对象
+	//	_allocator.construct(_last, val);
+	//	_last++;
+	//}
+
+	////一个右值变量 本身还是一个左值
+	//void push_back(T &&val) // 接收右值 向容器末尾添加元素
+	//{
+	//	if (full()) expand();
+	//	
+	//	_allocator.construct(_last, std::move(val));  //移动语义 将val强转成右值引用类型
+	//	_last++;
+	//}
+
+	//将两个push_back合并为一个 CMyString& + && = CMyString&  CMyString&& + && = CMyString&&
+	//函数模板类型推演+引用折叠可以代替上述函数
+	template<typename Ty> //自动类型推导 传入一个CMyString&类型时 C++编译器会做& + && = &的操作 即还是左值引用 
+	void push_back(Ty&& val) {
+		if (full()) expand();
+		
+		//forward类型完美转发
+		_allocator.construct(_last, std::forward<Ty>(val));  //移动语义 将val强转成右值引用类型
+		_last++;
+	}
+
+private:
+	T *_first; // 指向数组起始的位置
+	T *_last;  // 指向数组中有效元素的后继位置
+	T *_end;   // 指向数组空间的后继位置
+	Alloc _allocator; // 定义容器的空间配置器对象
+
+	// 容器迭代器失效增加代码
+	struct Iterator_Base
+	{
+		Iterator_Base(iterator *c = nullptr, Iterator_Base *n = nullptr)
+			:_cur(c), _next(n) {}
+		iterator *_cur;
+		Iterator_Base *_next;
+	};
+	Iterator_Base _head;
+
+	void expand() // 容器的二倍扩容
+	{
+		int size = _end - _first;
+		//T *ptmp = new T[2 * size];
+		T *ptmp = _allocator.allocate(2 * size);
+		for (int i = 0; i < size; ++i)
+		{
+			//ptmp[i] = _first[i];
+			_allocator.construct(ptmp + i, _first[i]);
+		}
+		//delete[]_first;
+		for (T *p = _first; p != _last; ++p)
+		{
+			_allocator.destroy(p);
+		}
+		_allocator.deallocate(_first);
+		_first = ptmp;
+		_last = _first + size;
+		_end = _first + 2 * size;
+	}
+};
+
+
+class CMyString
+{
+public:
+	friend CMyString operator+(const CMyString& lhs, const CMyString& rhs);
+	friend ostream& operator<<(ostream& out, const CMyString& str);
+	CMyString(const char *str = nullptr)
+	{
+		cout << "CMyString(const char*)" << endl;
+		if (str != nullptr)
+		{
+			//要加上‘\0’ 
+			mptr = new char[strlen(str) + 1];
+			strcpy(mptr, str);
+		}
+		else
+		{
+			mptr = new char[1];
+			*mptr = '\0';
+		}
+	}
+	~CMyString()
+	{
+		cout << "~CMyString" << endl;
+		delete[]mptr;
+		mptr = nullptr;
+	}
+
+	// 带左值引用参数的拷贝构造
+	CMyString(const CMyString &str)
+	{
+		cout << "CMyString(const CMyString&)" << endl;
+		mptr = new char[strlen(str.mptr) + 1];
+		strcpy(mptr, str.mptr);
+	}
+
+	// 带右值引用参数的拷贝构造 使用临时对象进行拷贝构造
+	CMyString(CMyString&& str) {
+		cout << "CMyString(CMyString&&)" << endl;
+		mptr = str.mptr; //直接把临时变量的资源给当前对象
+		str.mptr = nullptr;
+	}
+
+	// 带左值引用参数的赋值重载函数
+	CMyString& operator=(const CMyString &str)
+	{
+		cout << "operator=(const CMyString&)" << endl;
+		if (this == &str)
+			return *this;
+
+		delete[]mptr;
+
+		mptr = new char[strlen(str.mptr) + 1];
+		strcpy(mptr, str.mptr);
+		return *this;
+	}
+
+	// 带右值引用参数的赋值重载函数 临时对象
+	CMyString& operator=(CMyString &&str)
+	{
+		cout << "CMyString& operator=(CMyString&&)" << endl;
+		if (this == &str)
+			return *this;
+
+		delete[]  mptr;
+
+		mptr = str.mptr;
+		str.mptr = nullptr;
+		return *this;
+	}
+
+	//将string类型转换为const char*类型
+	const char* c_str() const { return mptr; }
+
+private:
+	char *mptr;
+};
+
+//有new没有delete 返回局部对象无法释放堆内存
+//CMyString operator+(const CMyString& lhs, const CMyString& rhs) {
+//	char* ptmp = new char[strlen(lhs.mptr) + strlen(rhs.mptr) + 1];
+//	strcpy(ptmp, lhs.mptr);
+//	strcat(ptmp, rhs.mptr);
+//	//返回局部对象无法释放堆内存 因为没有响应的delete操作 所以这里先要把对象构建出来
+//	CMyString tmpstr(ptmp);
+//	
+//	//然后再释放内存
+//	delete[] ptmp;
+//	return tmpstr;
+//}
+
+//输出运算符重载
+ostream& operator<<(ostream& out, const CMyString& str) {
+	out << str.mptr;
+	return out;
+}
+
+//上面代码可以更换一种写法
+CMyString operator+(const CMyString& lhs, const CMyString& rhs) {
+	CMyString tmpStr;
+	tmpStr.mptr = new char[strlen(lhs.mptr) + strlen(rhs.mptr) + 1];
+	strcpy(tmpStr.mptr, lhs.mptr);
+	strcat(tmpStr.mptr, rhs.mptr);
+	return tmpStr; //这里要调用拷贝构造函数 拷贝构造str3
+}
+
+int main()
+{
+	//一道笔试题
+	CMyString str1 = "aaa";
+	vector<CMyString> vec;
+	cout << "-------------------------------" << endl;
+	vec.push_back(str1);
+	vec.push_back(CMyString("bbb"));
+	cout << "-------------------------------" << endl;
+	return 0;
+}
