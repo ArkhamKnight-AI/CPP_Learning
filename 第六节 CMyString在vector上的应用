@@ -96,6 +96,12 @@ private:
 //	return tmpstr;
 //}
 
+//输出运算符重载
+ostream& operator<<(ostream& out, const CMyString& str) {
+	out << str.mptr;
+	return out;
+}
+
 //上面代码可以更换一种写法
 CMyString operator+(const CMyString& lhs, const CMyString& rhs) {
 	CMyString tmpStr;
@@ -109,12 +115,6 @@ CMyString GetString(CMyString& str) {
 	const char* pstr = str.c_str();
 	CMyString tempStr(pstr);
 	return tempStr;
-}
-
-//输出运算符重载
-ostream& operator<<(ostream& out, const CMyString& str) {
-	out << str.mptr;
-	return out;
 }
 
 #if 0
