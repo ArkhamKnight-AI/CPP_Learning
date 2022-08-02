@@ -1,0 +1,57 @@
+#include<iostream>
+#include<functional> //函数对象
+#include<algorithm> //泛型算法
+#include<vector>
+#include<ctime>
+using namespace std;
+
+/*
+C++ STL中的绑定器
+bind1st:operator() 的第一个形参变量绑定成一个确定的值
+bind2nd:operator() 的第二个形参变量绑定成一个确定的值
+*/
+
+template<typename Container>
+void showContainer(Container& con) {
+	//告知编译器 无论用什么容器类型实例化 都有一个iterator迭代器 Container作用域下的iterator是一个类型名
+	//否则编译器不知道iterator是一个类型还是变量
+	typename Container::iterator it = con.begin();
+	for (; it != con.end(); it++) {
+		cout << *it << " ";
+	}
+
+	cout << endl;
+}
+
+int main()
+{
+	vector<int> vec;
+	srand(time(nullptr)); //设置随机数种子 要包含ctime头文件
+
+	for (int i = 0; i < 20; i++) {
+		vec.push_back(rand() % 100 + 1);
+	}
+
+	sort(vec.begin(), vec.end()); //默认小到大排序
+	showContainer(vec);
+
+	sort(vec.begin(), vec.end(), greater<int>()); //从大到小排序 二元函数对象
+	showContainer(vec);
+
+	//把70按顺序插入到vec容器当中 找第一个小于70的数字 在进行()运算符重载时 只要拿一个元素
+	//将这个元素和70比较 无法直接使用greater<int>和less<int> 因为他们是二元函数 现在需要一元的
+	//绑定器+二元函数对象 => 一元函数对象 
+	//greater return a > b;    less return a < b;
+	//bind1st: 将greater<int>的 bool operator()(const _Ty& _Left, const _Ty& _Right)的第一个参数_Left绑定为70
+	//将函数对象greater<int>变为bool operator()(70, const _Ty& _Right) -> 变为一元函数对象 70 > b => 找小于70的
+	//bind1st + greater ->  变为一元函数对象 70 > b
+	//bind2nd + less ->找小于70 a < 70
+	auto it = find_if(vec.begin(), vec.end(), bind1st(greater<int>(), 70));
+	//也可以写成 auto it = find_if(vec.begin(), vec.end(), bind2nd(less<int>(), 70));
+	if (it != vec.end()) {
+		vec.insert(it, 70);
+	}
+	showContainer(vec);
+
+	return 0;
+}
