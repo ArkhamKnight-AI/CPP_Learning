@@ -1,0 +1,124 @@
+#include<iostream>
+#include<functional> //函数对象
+#include<algorithm> //泛型算法
+#include<vector>
+#include<ctime>
+#include<string>
+#include<map>
+using namespace std;
+
+/*
+C++11提供的绑定器和函数对象
+		bind   function
+		C++ STL bind1st和bind2nd => 本身还是一个函数对象
+
+function：绑定器，函数对象，lambda表达式，它们只能使用在一条语句中
+*/
+
+void hello1() {
+	cout << "hello world!" << endl;
+}
+
+void hello2(string str) { //void (*pfunc)(string str) 函数指针
+	cout << str << endl;
+}
+
+int sum(int a, int b) {
+	return a + b;
+}
+
+class Test {
+public:  
+    //必须依赖一个对象 通过 函数指针 访问成员方法需要加类作用域 Test::*pfunc(string)
+	void hello(string str) { cout << str << endl; }
+};
+
+void doShowAllBooks() { cout << "查看所有书籍信息" << endl; }
+void doBorrow() { cout << "借书" << endl; }
+void doBack() { cout << "还书" << endl; }
+void doQueryBooks() { cout << "查询书籍" << endl; }
+void doLoginOut() { cout << "注销" << endl; }
+
+int main() {
+	int choice = 0;
+
+	//C的函数指针也可以 但只能接受普通函数 无法接受绑定器绑定的函数对象和lambda表达式函数对象
+	//使用function函数对象
+	//键是输入的值 值是function函数对象类型
+	map<int, function<void()>> actionMap;
+	//C++11支持下面的方法 共有对象的初始化 结构体初始化
+	actionMap.insert({ 1, doShowAllBooks });
+	actionMap.insert({ 2, doBorrow });
+	actionMap.insert({ 3, doBack });
+	actionMap.insert({ 4, doQueryBooks });
+	actionMap.insert({ 5, doLoginOut });
+
+	for (;;) {
+		cout << "------------------------------" << endl;
+		cout << "1.查看所有书籍信息" << endl;
+		cout << "2.借书" << endl;
+		cout << "3.还书" << endl;
+		cout << "4.查询书籍" << endl;
+		cout << "5.注销" << endl;
+
+		cout << "------------------------------" << endl;
+		cout << "请选择书籍:" << endl;
+		cin >> choice;
+
+		auto it = actionMap.find(choice);
+		if (it == actionMap.end()) {
+			cout << "输入数字无效，重新选择" << endl;
+		}
+		else {
+			it->second();
+		}
+
+		//下面这种代码不好 因为这块代码无法闭合 无法做到"开-闭原则"
+		//不好维护 风险较大
+		/*switch (choice) {
+		case 1:
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		case 5:
+			break;
+		default:
+			break;
+		}*/
+		
+	}
+}
+
+
+#if 0
+int main() 
+{
+	//从function类模板定义处 看到希望用一个函数类型实例化function 
+	//函数指针类型：void(*)() -> 表示这是一个指针类型 指向一个返回值为void 不带形参的函数
+	function<void()> func1 = hello1; 
+	func1(); //调用func1.operator()小括号运算符重载函数	 里面在调用包装的hello1函数
+	//由于用函数对象包装的函数类型 hello1本身就没有参数 所以调用()重载函数时没有参数
+
+	//由于用函数对象包装的函数类型 hello2本身有一个string类型参数 所以调用()重载函数时需要一个string类型的参数
+	function<void(string)> func2 = hello2;
+	func2("hello hello2!");
+
+	//由于用函数对象包装的函数类型 sum本身有2个int类型参数 所以调用()重载函数时需要2个int类型的参数
+	function<int(int, int)> func3 = sum;
+	cout << func3(20, 30) << endl;
+
+	//不光可以保留函数类型 还可以保留函数对象类型 lambda表达式
+	function<int(int, int)> func4 = [](int a, int b)->int {return a + b; };
+	cout << func4(200, 100) << endl;
+
+	//对于一个类而言 有2个参数：test类型指针 + string
+	function<void(Test*, string)> func5 = &Test::hello;
+	func5(&Test(), "call Test::hello! ");
+
+	return 0;
+}
+#endif
