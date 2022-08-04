@@ -1,1 +1,148 @@
-得到的
+#include<iostream>
+#include<string>
+#include<vector>
+#include<algorithm>
+using namespace std;
+
+/*
+C++11 函数对象的升级版=>lambda表达式
+函数对象的缺点：
+使用在泛型算法参数传递 比较性质/自定义操作 优先级队列 
+没有必要为了构造优先级队列构造出一个类型 构造完后永远用不到了 灵活性太差
+
+lambda表示语法
+[捕获外部变量](形参列表)->返回值{操作代码}   ->指向符
+
+*/
+
+template<typename T>
+class TestLambda01 {
+public:
+	//lambda表达式[]是空的 表示不捕获外部变量
+	TestLambda01() {}
+	void operator()() const{
+		cout << "hello world" << endl;
+	}
+};
+
+template<typename T = int>
+class TestLambda02 {
+public:
+	//lambda表达式[]是空的 表示不捕获外部变量
+	TestLambda02(){}
+	int operator()(int a, int b) const {
+		return a + b;
+	}
+};
+
+template<typename T = int>
+class TestLambda03 {
+public:
+	TestLambda03(int& a, int& b)
+		:ma(a), mb(b) {}
+
+	void operator()() const {
+		int temp = ma;
+		ma = mb;
+		mb = temp;
+	}
+private:
+	//给ma和mb赋值并不是改变这两个引用变量本身 即并不改变底层的4字节
+	//只修改了引用变量引用的内存 而不是引用对象本身
+	int& ma;
+	int& mb;
+};
+
+int main() {
+	vector<int> vec;
+	for (int i = 0; i < 20; i++) {
+		vec.push_back(rand() % 100 + 1);
+	}
+
+	sort(vec.begin(), vec.end(), [](int a, int b)->bool
+	{
+		return a < b;
+	});
+
+	for (int val : vec) {
+		cout << val << " ";
+	}
+	cout << endl;
+
+
+	//65插入从小到大的序列 找第一个小于65的数 
+	auto it = find_if(vec.begin(), vec.end(), [](int a)->bool
+	{
+		return a > 65;
+	}
+	);
+	vec.insert(it, 65);
+
+	//输出所有元素
+	for_each(vec.begin(), vec.end(), [](int a) {cout << a << " "; });
+	cout << endl;
+
+	//只输出偶数
+	for_each(vec.begin(), vec.end(), [](int a)
+	{
+		if (a % 2 == 0) cout << a << " ";
+	});
+
+	return 0;
+}
+
+
+#if 0
+int main() 
+{	
+	//下面两种写法等价
+	//1.不捕获外部参数 无形参 返回值为void
+	//(1)用lambda表达式
+	auto func1 = []()->void {cout << "hello world!" << endl; };
+	func1();
+
+	//(2)定义函数对象
+	TestLambda01<void> t1;
+	t1();
+
+	//2.不捕获外部参数 形参列表有2个int 返回值为int
+	//(1)用lambda表达式
+	auto func2 = [](int a, int b)->int { return a + b; };
+	cout << func2(20, 30) << endl;
+
+	//(2)定义函数对象
+	TestLambda02<void> t2;
+	cout << t2(20, 30) << endl;
+
+	//3.如果lambda返回值不需要 可以省略->指向符 下面func3和func1是一样的
+	auto func3 = [](){cout << "hello world!" << endl; };
+	func3();
+
+	//4.使用[]捕获外部变量
+	//[=]表示以传值方式捕获外部所有变量
+	//[&]表示以传引用的方式捕获外部所有变量
+	//[this]表示捕获外部的this指针
+	//[=, &a]表示以传值的方式捕获外部的所有变量 但是a以引用方式捕获
+	//[a, b]表示以传值的方式捕获外部变量a和b
+	//[a, &b]表示a以传值方式捕获 b以传引用方式捕获
+	int a = 10;
+	int b = 20;
+	//相当于给所有成员变量添加mutable 用引用方式传递不需要加mutable
+	auto func4 = [&a, &b]()
+	{
+		int temp = a;
+		a = b;
+		b = temp;
+	};
+	func4();
+	cout << "a:" << a << " b:" << b << endl;
+	
+	a = 10;
+	b = 20;
+	TestLambda03<>t3(a, b);
+	t3();
+	cout << "a:" << a << " b:" << b << endl;
+
+	return 0;
+}
+#endif
