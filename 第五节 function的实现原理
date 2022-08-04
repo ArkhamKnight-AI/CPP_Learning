@@ -1,0 +1,90 @@
+#include<iostream>
+#include<vector>
+#include<string>
+#include<functional>
+using namespace std;
+
+/*
+function函数对象类型的实现原理
+*/
+
+//(1)先提供一个模板 类
+template<typename Fty>
+class myfunction {};
+
+//(2)然后才可以针对这个模板类提供部分特例化的函数对象
+//template<typename R, typename A1>
+//class myfunction<R(A1)> {
+//public:
+//	//接受的参数是一个函数指针
+//	using PFUNC = R(*)(A1);
+//
+//	//构造函数
+//	myfunction(PFUNC pfunc)
+//		:_pfunc(pfunc) {}
+//
+//	//()运算符重载函数
+//	R operator()(A1 arg) {
+//		return _pfunc(arg); //底层调用的就是hello
+//	}
+//
+//private:
+//	PFUNC _pfunc;
+//};
+//
+////重新为sum定义一个myfunction
+//template<typename R, typename A1, typename A2>
+//class myfunction<R(A1, A2)> {
+//public:
+//	//接受的参数是一个函数指针
+//	using PFUNC = R(*)(A1, A2);
+//
+//	//构造函数
+//	myfunction(PFUNC pfunc)
+//		:_pfunc(pfunc) {}
+//
+//	//()运算符重载函数
+//	R operator()(A1 arg1, A2 arg2) {
+//		return _pfunc(arg1, arg2); //底层调用的就是hello
+//	}
+//
+//private:
+//	PFUNC _pfunc;
+//};
+
+//有一个问题 每个参数的参数列表都不一样 形参个数都不同 每个都要提供一个myfunction吗？
+//用R来抽象返回值类型
+template<typename R, typename... A> //可变参 说明A表示的不是一个类型 而是一组类型 个数任意
+class myfunction<R(A...)> { //可变参数个数的函数参数列表
+public:
+	//接受的参数是一个函数指针
+	using PFUNC = R(*)(A...);
+
+	//构造函数
+	myfunction(PFUNC pfunc)
+		:_pfunc(pfunc) {}
+
+	//()运算符重载函数
+	R operator()(A... arg) {
+		return _pfunc(arg...); //一组形参变量 将这一组参数都当作独立参数传入
+	}
+
+private:
+	PFUNC _pfunc;
+};
+
+void hello(string str) { cout << str << endl; }
+int sum(int a, int b) { return a + b; }
+
+
+int main() 
+{
+	function<void(string)> func1 = hello;
+	func1("hello world");
+	myfunction<void(string)> func2 = hello;
+	func2("hello world");
+	myfunction<int(int, int)> func3 = sum;
+	cout << func3(10, 20) << endl;
+
+	return 0;
+}
