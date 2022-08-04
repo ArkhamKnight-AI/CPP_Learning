@@ -1,0 +1,68 @@
+#include<iostream>
+#include<map>
+#include<string>
+#include<queue>
+#include<functional>
+using namespace std;
+
+/*
+C++11 函数对象的升级版=>lambda表达式
+函数对象的缺点：
+使用在泛型算法参数传递 比较性质/自定义操作 优先级队列 
+没有必要为了构造优先级队列构造出一个类型 构造完后永远用不到了 灵活性太差
+既然
+
+lambda表示语法
+[捕获外部变量](形参列表)->返回值{操作代码}   ->指向符
+
+既然lambda表达式只能使用在语句当中,如果想跨语句使用之前定义好的lambda表达式，怎么办？
+应该用什么类型来表示lambda表达式？
+使用function来表示函数对象的类型 bind1st/bind2nd bind绑定器结果是一个函数对象！
+
+lambda表达式 =》函数对象
+*/
+
+class Data {
+public:
+	Data(int a = 10, int b = 10)
+		:ma(a), mb(b) {}
+	//灵活性较差
+	/*bool operator>(const Data& data) const { return ma > data.ma; };
+	bool operator<(const Data& data) const { return ma < data.ma; };*/
+	int ma;
+	int mb;
+};
+
+int main() {
+	//例1.提供不同的函数调用
+	map<int, function<int(int, int)>> calculateMap;
+	calculateMap[1] = [](int a, int b)->int {return a + b; };
+	calculateMap[2] = [](int a, int b)->int {return a - b; };
+	calculateMap[3] = [](int a, int b)->int {return a * b; };
+	calculateMap[4] = [](int a, int b)->int {return a / b; };
+
+	cout << "选择：" << endl;
+	int choice;
+	cin >> choice;
+	cout << "10 + 15:" << calculateMap[choice](10, 15) << endl;
+
+	//例2.智能指针自定义删除器 delete p; 处理一个文件 fopen()返回类型为FILE* 应该使用fclose()释放资源
+	unique_ptr<FILE, function<void(FILE*)>> ptr1(fopen("data.txt", "w"), [](FILE* pf) {fclose(pf); });
+
+	//例3.优先级队列
+	using FUNC = function<bool(Data&, Data&)>;
+	priority_queue<Data, vector<Data>, FUNC> maxHeap([](Data& d1, Data& d2)->bool 
+	{
+		return d1.ma > d2.ma;
+	});
+	maxHeap.push(Data(10, 20));
+	maxHeap.push(Data(15, 20));
+	maxHeap.push(Data(20, 10));
+
+	while (!maxHeap.empty()) {
+		cout << "ma = " << maxHeap.top().ma << " mb = " << maxHeap.top().mb << endl;
+		maxHeap.pop();
+	}
+
+	return 0;
+}
