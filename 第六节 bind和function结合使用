@@ -1,0 +1,46 @@
+#include<iostream>
+#include<vector>
+#include<string>
+#include<functional>
+using namespace std;
+using namespace placeholders;
+
+
+/*
+C++11 bind绑定器 => 返回的结果还是一个函数对象
+*/
+
+void hello(string str) { cout << str << endl; }
+
+int sum(int a, int  b) { return a + b; }
+
+class Test {
+public:
+	int sum(int a, int b) { return a + b; }
+};
+
+int main() 
+{
+	//bind是函数模板 可以自动推演模板类型参数 返回一个新的绑定器
+	bind(hello, "hello bind!")(); //返回的是一个绑定器 也就是一个函数对象 可以调用()运算符重载函数
+	cout << bind(sum, 10, 20)() << endl;
+	cout << bind(&Test::sum, Test(), 20, 30)() << endl; //成员方法依赖于对象才可以调用，所以要加入对象
+
+
+	//参数占位符 bind绑定器最多可以绑定20个参数 
+	//也就是hello这个方法需要一个参数 但这个参数具体是什么我不知道 需要等待用户传递
+	//小括号中必须传递参数
+	//绑定器 出了语句 无法继续使用
+	bind(hello, _1)("hello bind2!");
+	cout << bind(sum, _1, _2)(200, 300) << endl;
+
+	//bind和function一起使用 把类型留下来 重复使用
+	//此处把bind返回的绑定器binder复用起来了
+	function<void(string)> func1 = bind(hello, _1);
+	func1("hello china!");
+	func1("hello shanxi!");
+	func1("hello sichuan!");
+
+
+	return 0;
+}
