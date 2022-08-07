@@ -1,0 +1,67 @@
+#include<iostream>
+#include<thread>
+#include<list>
+#include<mutex>
+using namespace std;
+
+/*
+C++	thread 模拟车站三个窗口买票的程序
+线程间互斥 -> 互斥锁mutex -> lock_guard封装mutex
+*/
+
+int ticketcount = 100; //车站有100张车票 由三个窗口一起卖票
+std::mutex mtx; //全局的一把互斥锁
+
+//模拟卖票的线程函数 lock_guard和unique_lock 解决运行时遇到返回 无法执行unlock造成死锁的情况
+//void sellTicket(int index) {
+//	while (ticketcount > 0) { //锁+双重判断
+//		//临界区代码段 -> 原子操作 -> 线程间互斥操作 -> mutex
+//		//mtx.lock();
+//		{
+//			//lock_guard是while中的局部对象 出了while才析构 睡眠没必要放在锁的范围内 因此加一个作用域
+//			//这样只要出了这个作用域就可以析构了 这样就算代码中有return 出了作用域还是可以析构lock 释放锁
+//			//保证所有线程都已释放锁 防止线程死锁问题的发生
+//			//lock_guard不支持拷贝构造和=运算符重载 所以使用unique_lock
+//			lock_guard<std::mutex> lck(mtx);  //类似于scoped_ptr
+//			if (ticketcount) {
+//				cout << "窗口" << index << "卖出第：" << ticketcount-- << "张票" << endl;
+//			}
+//		}	
+//		//mtx.unlock(); //可以不用手动添加->lock_guard
+//		std::this_thread::sleep_for(chrono::milliseconds(100));
+//	}
+//}
+
+void sellTicket(int index) {
+	while (ticketcount > 0) { //锁+双重判断
+		//临界区代码段 -> 原子操作 -> 线程间互斥操作 -> mutex
+		//mtx.lock();
+		{
+			//unique_lock -> unique_ptr 支持带右值引用的拷贝构造和赋值函数
+			unique_lock<std::mutex> lck(mtx);  
+			lck.lock();
+			if (ticketcount) {
+				cout << "窗口" << index << "卖出第：" << ticketcount-- << "张票" << endl;
+			}
+
+			lck.unlock();
+		}
+		//mtx.unlock(); //可以不用手动添加->lock_guard
+		std::this_thread::sleep_for(chrono::milliseconds(100));
+	}
+}
+
+int main() {
+	list<std::thread> tlist;
+	for (int i = 1; i <= 3; i++) {
+		tlist.push_back(std::thread(sellTicket, i));
+	}
+
+	for(std::thread& t : tlist){
+		t.join();
+	}
+
+	cout << "所有票均已卖完" << endl;
+
+	return 0;
+} 
