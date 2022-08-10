@@ -1,1 +1,55 @@
-ddd
+#include<iostream>
+#include<thread>
+#include<atomic>  //包含很多原子类型
+#include<list>
+using namespace std;
+
+/*
+C++11
+窗口卖票 int count = 100;
+
+lock_guard<std::mutex> guard(mtx);
+count++;
+
+lock_guard<std::mutex> guard(mtx);
+count--;
+
+互斥锁是比较重的 适合临界区代码做的事情较为复杂的情况
+系统理论：CAS来保证上面++ --操作的原子特性就足够了 无锁操作
+exchange/swap 
+*/
+
+/*
+volatile每次从内存中去读这个值 而不是因编译器优化从缓存的地方读取
+从而保证volatile变量可以被正确读取
+*/
+volatile std::atomic_bool isReady = false;
+volatile std::atomic_int mycount = 0;
+
+void task() {
+	while (!isReady) {
+		std::this_thread::yield(); //线程出让当前CPU时间片，等待下一次调度 转为就绪状态
+	}
+
+	for (int i = 0; i < 100; i++) {
+		mycount++;
+	}
+}
+
+int main() {
+	list<std::thread> tlist;
+	for (int i = 0; i < 10; i++) {
+		tlist.push_back(std::thread(task));
+	}
+
+	std::this_thread::sleep_for(std::chrono::seconds(3));
+	isReady = true;
+
+	for (std::thread& t : tlist) {
+		t.join(); 
+	}
+
+	cout << "count:" << mycount << endl; 
+
+	return 0;
+}
