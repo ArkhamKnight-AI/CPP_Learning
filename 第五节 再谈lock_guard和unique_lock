@@ -1,0 +1,31 @@
+#include<iostream>
+#include<thread>
+#include<mutex>
+#include<condition_variable>
+#include<queue>
+using namespace std;
+
+/*
+1.lock_guard和unique_lock
+2.condition_variable wait 和 notify_all方法
+*/
+std::mutex mtx;  //pthread_mutex_t Linux
+std::condition_variable cv; //pthread_condition_t Linux
+
+int main() { 
+	//不可能用在函数参数传递或者返回过程中 因为会用到拷贝构造和赋值运算符重载函数
+	//但lock_guard的两个函数都被delete了 所以只能用在简单的临界区代码段互斥操作中
+	lock_guard<std::mutex> guard(mtx); //进入作用域：构造时主动lock 析构时unlock
+
+	//不仅仅可以用在简单的临界区代码段互斥操作中 还能用在调用过程中
+	//unique_lock<std::mutex> lck(mtx);
+
+	//1.使线程进入等待状态 2.调用lck.unlock方法 可以把mtx互斥锁释放 
+	//cv.wait(lck);
+	
+	//通知在cv上等待的线程 条件成立了 起来干活了！
+	//其他在cv上等待的线程收到通知 从等待状态 -> 阻塞状态 ->获取互斥锁后 -> 线程继续往下执行
+	cv.notify_all();
+
+	return 0;
+} 
