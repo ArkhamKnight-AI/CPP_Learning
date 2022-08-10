@@ -1,0 +1,76 @@
+#include<iostream>
+#include<thread>
+#include<atomic>  //包含很多原子类型
+#include<list>
+using namespace std;
+
+/*
+单例模式：一个类不管创建多少次对象，永远只能得到该类型一个对象的实例
+A *p1 = new A();
+A *p2 = new A();
+A *p3 = new A();
+
+常用到的 比如：
+(1)日志模块：不能每次写日志都创建一个对象 否则会占用很大内存
+(2)数据库模块：只要调用数据库模块的一个对象 不能因为每次有请求就创建一个数据库对象
+*/
+
+#if 0
+//饿汉式单例模式 落在类作用域中的全局变量 是线程安全的 因为数据段在main函数前已经创建、初始化好的
+//坏处：可能根本不需要这个对象 但还是构造了 且构造开销大
+class Singleton {
+public:
+	static Singleton* getInstance() { //3.获取类的唯一实例对象的接口方法 
+		return &instance;
+	}
+
+private:
+	static Singleton instance;   //2.定义一个唯一的类的实例对象
+	Singleton() { //1.构造函数私有化
+
+	}
+
+	//为了防止产生其他实例 拷贝构造函数和 =运算符重载函数 也需要限制 delete掉
+	Singleton(const Singleton&) = delete;
+	Singleton& operator=(const Singleton&) = delete;
+};
+//静态成员变量 类内定义 类外初始化 在数据段上 
+Singleton Singleton::instance;
+#endif
+
+//懒汉式单例模式 
+class Singleton {
+public:
+	static Singleton* getInstance() { //3.获取类的唯一实例对象的接口方法 
+		//instance初始化为nullptr 如果是初始化 则new一个对象
+		//如果instance不为nullptr 则在堆区开辟空间创建对象
+		if (instance == nullptr) {
+			instance = new Singleton();
+		}
+
+		return instance;
+	}
+
+private:
+	static Singleton* instance;   //2.定义一个唯一的类的实例对象 将其设置为一个指针
+	Singleton() { //1.构造函数私有化
+
+	}
+
+	//为了防止产生其他实例 拷贝构造函数和 =运算符重载函数 也需要限制 delete掉
+	Singleton(const Singleton&) = delete;
+	Singleton& operator=(const Singleton&) = delete;
+};
+//静态成员变量 类内定义 类外初始化 在数据段上 
+Singleton* Singleton::instance;
+
+int main() {
+	//指针的地址一模一样 因为是唯一的实例
+	Singleton* p1 = Singleton::getInstance();
+	Singleton* p2 = Singleton::getInstance();
+	Singleton* p3 = Singleton::getInstance();
+
+	//Singleton t = *p1;  不可以拷贝构造
+
+	return 0;
+}
