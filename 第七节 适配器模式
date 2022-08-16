@@ -1,0 +1,73 @@
+#include<iostream>
+#include<memory>
+#include<string>
+using namespace std;
+
+/*
+适配器模式：让 不兼容的 接口可以在一起工作
+电脑 -> 投影到 -> 投影仪上 VGA/HDMI/TypeC
+
+VGA接口的电脑，投影仪也是VGA接口
+
+*/
+class VGA {
+public:
+	virtual void play() = 0;
+};
+
+//TV01表示支持VGA接口的投影仪
+class TVO1 : public VGA {
+	void play() {
+		cout << "通过VGA接口连接投影仪进行视频播放" << endl;
+	}
+};
+
+//实现一个电脑类 只支持VGA接口
+class Computer {
+public:
+	//由于电脑只支持VGA接口 故该方法的参数也只能支持VGA接口的引用/指针
+	void playVideo(VGA* pVGA) {
+		pVGA->play();
+	}
+};
+
+//进了一批新的投影仪 只支持HDMI接口
+class HDMI {
+public:
+	virtual void play() = 0;
+};
+
+//支持HDMI的电脑接口
+class TV02 : public HDMI {
+	void play() {
+		cout << "通过HDMI连接投影仪进行视频播放" << endl;
+	}
+};
+
+
+//由于电脑(VGA接口)和投影仪(HDMI接口)无法直接相连，所以要添加适配器类
+class VGAtoHDMIAdapter : public VGA {
+public:
+	VGAtoHDMIAdapter(HDMI* p) : pHdmi(p) {}
+
+	//从VGA类继承 所以要重写VGA类的play方法 在重写的方法中调用HDMI的play()方法
+	//该方法就相当于转换头 做不同接口的信号转换
+	void play() {
+		pHdmi->play();
+	}
+private:
+	HDMI* pHdmi;
+};
+
+
+int main() {  
+	Computer computer;
+	computer.playVideo(new TVO1());
+	//2种解决方案：(1)换一个支持HDMI接口的电脑(代码重构)，代价大，但是从长远角度来说是好的
+	//(2)买一个转换头，能够把VGA信号转成HDMI信号(添加适配器类)
+	//computer.playVideo(new TV02()); 不可以 因为接口不兼容
+
+	//给电脑和TV02间加一个适配器 根据多态 调用的是适配器对象 因此调用适配器的play
+	computer.playVideo(new VGAtoHDMIAdapter(new TV02()));
+	return 0;
+}
