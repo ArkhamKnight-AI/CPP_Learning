@@ -1,0 +1,85 @@
+#include<iostream>
+#include<memory>
+#include<string>
+using namespace std;
+
+//代理模式
+class VideoSite { //抽象类
+public:
+	virtual void freeMovie() = 0; //免费电影
+	virtual void vipMovie() = 0; //vip电影
+	virtual void ticketMovie() = 0; //用券看的电影
+};
+
+//委托类
+class FixBugVideoSite : public VideoSite{ 
+public:
+	virtual void freeMovie() {
+		cout << "观看免费电影" << endl;
+	}
+
+	virtual void vipMovie() {
+		cout << "观看VIP电影" << endl;
+	}
+
+	virtual void ticketMovie() {
+		cout << "用券观看电影" << endl;
+	}
+};
+
+//免费视频的代理类 代理FixBugVideoSite
+class FreeMovieVideoSiteProxy : public VideoSite {
+public:
+	FreeMovieVideoSiteProxy() { pVideo = new FixBugVideoSite(); }
+	~FreeMovieVideoSiteProxy() { delete pVideo; }
+
+	//重写方法
+	virtual void freeMovie() { pVideo->freeMovie(); }
+
+	virtual void vipMovie() { cout << "您目前只是普通游客，需要升级VIP，才能观看VIP电影" << endl; }
+
+	virtual void ticketMovie() { cout << "您目前没有券，需要购买电影券，才能观看电影 " << endl; }
+
+private:
+	VideoSite* pVideo; 
+};
+
+//VIP视频的代理类 代理FixBugVideoSite
+class VIPMovieVideoSiteProxy : public VideoSite {
+public:
+	VIPMovieVideoSiteProxy() { pVideo = new FixBugVideoSite(); }
+	~VIPMovieVideoSiteProxy() { delete pVideo; }
+
+	//重写方法
+	virtual void freeMovie() { pVideo->freeMovie(); }
+
+	virtual void vipMovie() { pVideo->vipMovie(); }
+
+	virtual void ticketMovie() { cout << "您目前没有券，需要购买电影券，才能观看电影 " << endl; }
+
+private:
+	VideoSite* pVideo;
+};
+
+//这些都是通用的API接口 使用的都是基类的指针或者引用
+//不关心究竟是委托类还是代理类 只需要根据相应的虚函数表访问相应的虚函数即可
+void watchMovie(unique_ptr<VideoSite>& p) {
+	p->freeMovie();
+	p->vipMovie();
+	p->ticketMovie();
+}
+
+int main() {
+	//普通游客
+	unique_ptr<VideoSite> p1(new FreeMovieVideoSiteProxy());
+	//VIP用户
+	unique_ptr<VideoSite> p2(new VIPMovieVideoSiteProxy());
+
+	//此处如果直接传递对象 使用了左值引用的拷贝构造 而unique_ptr已经将其delete了
+	//所以要以引用方式传值参数
+	watchMovie(p1);
+	cout << endl;
+	watchMovie(p2);
+
+	return 0;
+}
