@@ -1,0 +1,114 @@
+#include<iostream>
+#include<memory>
+#include<string>
+#include<unordered_map>
+#include<list>
+using namespace std;
+
+/*
+观察者模式
+*/
+//观察者抽象类
+class Observer {
+public:
+	//处理消息的接口
+	virtual void handle(int msgid) = 0;
+};
+
+//第一个Observer实例 Observer1对1和2消息感兴趣
+class Observer1 : public Observer {
+public:
+	void handle(int msgid) {
+		switch (msgid) {
+		case 1:
+			cout << "Observer1 receive 1 msg!" << endl;
+			break;
+
+		case 2:
+			cout << "Observer1 receive 2 msg!" << endl;
+			break;
+
+		default:
+			cout << "Observer1 receive unknown msg!" << endl;
+		}	
+	}
+};
+
+//第二个Observer实例 Observer2对2号消息感兴趣
+class Observer2 : public Observer {
+public:
+	void handle(int msgid) {
+		switch (msgid) {
+		case 2:
+			cout << "Observer2 receive 2 msg!" << endl;
+			break;
+
+		default:
+			cout << "Observer2 receive unknown msg!" << endl;
+		}
+	}
+};
+
+//第三个Observer实例 Observer3对1号和3号消息感兴趣
+class Observer3 : public Observer {
+public:
+	void handle(int msgid) {
+		switch (msgid) {
+		case 1:
+			cout << "Observer3 receive 1 msg!" << endl;
+			break;
+
+		case 3:
+			cout << "Observer3 receive 3 msg!" << endl;
+			break;
+
+		default:
+			cout << "Observer3 receive unknown msg!" << endl;
+		}
+	}
+};
+
+class Subject {
+public:
+	//添加观察者
+	void addObserver(Observer* obser, int msgid) {
+		_subMap[msgid].push_back(obser);
+	}
+
+	//主题监测发生改变 通知响应的观察者对象处理事件
+	void dispatch(int msg) {
+		auto it = _subMap.find(msg);
+
+		//有人对这个事件感兴趣
+		if (it != _subMap.end()) {
+			for (auto pObser : it->second) {
+				pObser->handle(msg);
+			}
+		}
+	}
+private:
+	unordered_map<int, list<Observer*>> _subMap; //可能有多个观察者对同一个消息感兴趣
+};
+
+int main() {  
+	Subject subject;
+	Observer1* p1 = new Observer1();
+	Observer2* p2 = new Observer2();
+	Observer3* p3 = new Observer3();
+	
+	subject.addObserver(p1, 1);
+	subject.addObserver(p1, 2);
+	subject.addObserver(p2, 2);
+	subject.addObserver(p3, 1);
+	subject.addObserver(p3, 3);
+
+	int msgid = 0;
+	cout << "输入消息:" << endl;
+	for (;;) {
+		cin >> msgid;
+		if (msgid == -1) break;
+		subject.dispatch(msgid);
+	}
+
+	return 0;
+}
