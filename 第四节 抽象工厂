@@ -1,0 +1,103 @@
+#include<iostream>
+#include<string>
+using namespace std;
+
+/*
+有3组继承关系：
+BMW和Audi从Car继承
+BmwLight和AudiLight从Light继承
+BMWFactory和AudiFactory从AbstractFactory继承
+*/
+
+//系列产品1 汽车
+class Car {
+public:
+	Car(string name) : _name(name) {}
+	virtual void show() = 0;
+
+protected:
+	string _name;
+};
+
+class Bmw : public Car {
+public:
+	Bmw(string name) : Car(name) {}
+	void show() {
+		cout << "获取了一辆宝马汽车:" << _name << endl;
+	}
+};
+
+class Audi : public Car {
+public:
+	Audi(string name) : Car(name) {}
+
+	void show() {
+		cout << "获取了一辆奥迪汽车:" << _name << endl;
+	}
+};
+
+//系列产品2 车灯 
+class Light {
+public:
+	virtual void show() = 0;
+};
+
+//宝马灯
+class BmwLight : public Light {
+public:
+	void show() { cout << "BMW Light" << endl; }
+};
+
+//奥迪灯
+class AudiLight : public Light {
+	void show() { cout << "Audi Light" << endl; }
+};
+
+//工厂方法 -> 抽象工厂(对一组有关联关系的产品簇提供产品对象的统一创建)
+//既要创建汽车 又要创建车灯
+class AbstractFactory {
+public:
+	virtual Car* createCar(string name) = 0; //创建汽车
+	virtual Light* createLight() = 0; //创建汽车关联的产品 车灯
+};
+
+//宝马工厂 创建车+车灯
+class BMWFactory : public AbstractFactory {
+public:
+	Car* createCar(string name) {
+		return new Bmw(name);
+	}
+
+	Light* createLight() {
+		return new BmwLight();
+	}
+};
+
+//奥迪工厂 创建车+车灯
+class AudiFactory : public AbstractFactory {
+public:
+	Car* createCar(string name) {
+		return new Audi(name);
+	}
+
+	Light* createLight() {
+		return new AudiLight();
+	}
+};
+
+int main() {
+	unique_ptr<AbstractFactory> bmwfty(new BMWFactory());
+	unique_ptr<AbstractFactory> audifty(new AudiFactory());
+	unique_ptr<Car> p1(bmwfty->createCar("X6"));
+	unique_ptr<Car> p2(audifty->createCar("A8"));
+	unique_ptr<Light> l1(bmwfty->createLight());
+	unique_ptr<Light> l2(audifty->createLight());
+
+	p1->show();
+	p2->show();
+
+	l1->show();
+	l2->show();
+
+	return 0;
+}
