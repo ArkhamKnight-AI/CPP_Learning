@@ -1,0 +1,108 @@
+#include<iostream>
+//#include<vector>
+#include<map>
+using namespace std;
+
+/*
+C++11 STL容器中匹配了一个叫作emplace的新方法
+*/
+class Test {
+public:
+	Test(int a) { cout << "Test(int)" << endl; }
+	Test(int a, int b) { cout << "Test(int, int)" << endl; }
+	Test(const Test&) { cout << "Test(const Test&)" << endl; }
+	Test(Test&&) { cout << "Test(Test&&)" << endl; }
+	~Test() { cout << "~Test()" << endl; }
+};
+
+
+template<typename T>
+struct MyAllocator {
+	T* allocate(size_t size) {
+		return (T*)malloc(size * sizeof(T));
+	}
+
+	template<typename... Types> 
+	void construct(T* ptr, Types&&... args) {
+		//arg只是一个参数 而且是个Test对象 T也是Test类型
+		//如果直接船args... 就无法区分是左值还是右值了 就没法确定调用什么类型的拷贝构造函数了 所以要使用forward
+		new (ptr) T(std::forward<Types>(args)...);
+	}
+};
+
+template<typename T, typename Alloc = MyAllocator<T>>
+class vector {
+public:
+	vector() :vec_(nullptr), size_(0), idx_(0) {}
+
+	//预留空间
+	void reserve(size_t size){
+		vec_ = allocator_.allocate(size);
+	}
+
+	//push_back 可以使用引用折叠写成一个方法
+	/*void push_back(const T& val) {
+		allocator_.construct(vec_ + idx_, val);
+		idx++;
+	}
+
+	void push_back(T&& val) {
+		allocator_.construct(vec_ + idx_, std::move(val));
+	}*/ 
+	//不能直接使用T 否则无法引用折叠 实参传递左值:Type&& val -> Type& val  右值：Type&& val
+	template<typename Type>
+	void push_back(Type&& val) {
+		allocator_.construct(vec_ + idx_, std::forward<Type>(val));
+		idx_++;
+	}
+
+
+	//emplace_back
+	//成员方法本身实现为模板 可变参 可以接受任意数量参数
+	//1.引用折叠：如果给emplace_back传入左值 不能用右值引用变量引用左值 因为Test& + && = Test&
+	//这样写不仅可以接受实参的左值 也能接受实参的右值 
+	template<typename... Types>
+	void emplace_back(Types&&... args) {
+		//args展开后有的引用变量是左值引用 有的是右值引用 
+		//但不管是左值引用还是右值引用变量 本身是一个左值 传递过程中要保持args的引用类型(左值的？右值的？)->类型完美转发！
+		allocator_.construct(vec_ + idx_, std::forward<Types>(args)...);
+		idx_++;
+	}
+
+
+
+private:
+	T* vec_;
+	int size_;
+	int idx_;
+	Alloc allocator_;
+};
+
+int main() {
+	Test t1(10);
+	vector<Test> v;
+	v.reserve(100);
+	
+	cout << "===============" << endl;
+	//直接插入对象 两者没有区别 会调用带左值引用的拷贝构造函数
+	v.push_back(t1);
+	v.emplace_back(t1);
+	cout << "===============" << endl;
+
+	//直接插入对象 两者没有区别 会调用带右值引用的拷贝构造函数
+	v.push_back(Test(20));
+	v.emplace_back(Test(20));
+	cout << "===============" << endl;
+
+	//给emplace直接传入构造函数需要的参数 会调用相应的构造函数 在容器底层构造相应对象即可(不传入对象！)
+	v.emplace_back(20);
+	v.emplace_back(30, 40);
+
+	map<int, string> m;
+	//使用make_pair构造了一个临时对象 在map底层做资源转移
+	m.insert(make_pair(10, "zhangsan"));
+	//直接传入构造pair对象需要的参数 在map底层直接调用普通构造函数生成一个pair对象
+	m.emplace(10, "zhangsan");
+
+	return 0;
+}
