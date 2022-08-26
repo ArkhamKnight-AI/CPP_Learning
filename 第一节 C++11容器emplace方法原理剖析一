@@ -1,0 +1,45 @@
+#include<iostream>
+#include<vector>
+#include<map>
+using namespace std;
+
+/*
+C++11 STL容器中匹配了一个叫作emplace的新方法
+*/
+class Test {
+public:
+	Test(int a) { cout << "Test(int)" << endl; }
+	Test(int a, int b) { cout << "Test(int, int)" << endl; }
+	Test(const Test&) { cout << "Test(const Test&)" << endl; }
+	Test(Test&&) { cout << "Test(Test&&)" << endl; }
+	~Test() { cout << "~Test()" << endl; }
+};
+
+int main() {
+	Test t1(10);
+	vector<Test> v;
+	v.reserve(100);
+	
+	cout << "===============" << endl;
+	//直接插入对象 两者没有区别 会调用带左值引用的拷贝构造函数
+	v.push_back(t1);
+	v.emplace_back(t1);
+	cout << "===============" << endl;
+
+	//直接插入对象 两者没有区别 会调用带右值引用的拷贝构造函数
+	v.push_back(Test(20));
+	v.emplace_back(Test(20));
+	cout << "===============" << endl;
+
+	//给emplace直接传入构造函数需要的参数 会调用相应的构造函数 在容器底层构造相应对象即可(不传入对象！)
+	v.emplace_back(20);
+	v.emplace_back(30, 40);
+
+	map<int, string> m;
+	//使用make_pair构造了一个临时对象 在map底层做资源转移
+	m.insert(make_pair(10, "zhangsan"));
+	//直接传入构造pair对象需要的参数 在map底层直接调用普通构造函数生成一个pair对象
+	m.emplace(10, "zhangsan");
+
+	return 0;
+}
